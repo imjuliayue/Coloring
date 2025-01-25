@@ -9,16 +9,23 @@ def midlineToLine(midline):
 
     # OUTPUT:       the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
 
+    if midline.size == 0 or midline.size == 1:
+        return (0,1,0), 0
+
     # take last two points
     lastPoint = midline[-1]
     secondLP = midline[-2]
 
     # slope
     slopeVec = lastPoint - secondLP
-    slope = slopeVec[0]/slopeVec[1]     # = x/y (x is forward direction)
 
-    # intercept (use x = my + b --> b = my - x)
-    intercept = slope * lastPoint[1] - lastPoint[0]
+    if slopeVec[0] == 0:
+        return (0,1,0), slopeVec[1]
+
+    slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
+
+    # intercept (use y = mx + b --> b = mx - y)
+    intercept = slope * lastPoint[0] - lastPoint[1]
 
     return slopeVec, intercept
 
