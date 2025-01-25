@@ -1,4 +1,5 @@
 import numpy as np
+from svm_dependents import *
 from perc22a.predictors.utils.cones import Cones
 from svm_dependents import *
 
@@ -81,6 +82,8 @@ def classify(slopeVec, intercept, point):
 
 
 def get_closest_point_idx(points, curr_point):
+    # TODO: for testing, create "colored cones" so that points isn't empty list
+    assert(points.size > 0)
     # gets index of point in points farthest from curr_point and returns the dist
     assert(points.shape[1] == curr_point.shape[0])
 
@@ -126,8 +129,13 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
+<<<<<<< HEAD
     idxBlue = get_closest_point_idx(cones.blue_cones, midline[-1])
     idxYellow = get_closest_point_idx(cones.yellow_cones, midline[-1])
+=======
+    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), (0,0))
+    idxYellow = get_closest_point_idx(np.array(cones.yellow_cones), (0,0))
+>>>>>>> c83cf36dcc34e10a394d162f631152996f8e00f3
     
     farBlue = cones.blue_cones[idxBlue]
     farYellow = cones.blue_cones[idxYellow]

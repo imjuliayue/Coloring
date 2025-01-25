@@ -162,6 +162,7 @@ print(classed)
 print(slopes)
 print(intercepts)
 
+<<<<<<< HEAD
 print("----------------------------------------------------------------")
 print("\nTesting conesBeforeLine")
 
@@ -172,3 +173,9 @@ newList = conesBeforeLine(points, perpSlope2, perpIntercept2)
 
 print("\n Class result:")
 print(newList)
+=======
+midline_pts = np.column_stack((X, Y))
+slopeVec, intercept = midlineToLine(midline_pts)
+colored_cones = Cones()
+SVM_update(midline_pts, colored_cones, points_above.tolist())
+>>>>>>> c83cf36dcc34e10a394d162f631152996f8e00f3
