@@ -129,14 +129,9 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-<<<<<<< HEAD
     idxBlue = get_closest_point_idx(cones.blue_cones, midline[-1])
     idxYellow = get_closest_point_idx(cones.yellow_cones, midline[-1])
-=======
-    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), (0,0))
-    idxYellow = get_closest_point_idx(np.array(cones.yellow_cones), (0,0))
->>>>>>> c83cf36dcc34e10a394d162f631152996f8e00f3
-    
+
     farBlue = cones.blue_cones[idxBlue]
     farYellow = cones.blue_cones[idxYellow]
 
