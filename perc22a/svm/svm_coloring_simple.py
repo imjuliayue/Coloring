@@ -96,7 +96,7 @@ def conesBeforeLine(points, perpSlope, perpIntercept):
     newList = []                    # holds True/False values
 
     for xy in points:               # classify function kind of does it lol
-        c, _, _ = classification(perpSlope, perpIntercept, xy)
+        c, _, _ = classify((1,perpSlope,0), perpIntercept, xy)
         newList.append(c)
     
     return newList
@@ -104,7 +104,7 @@ def conesBeforeLine(points, perpSlope, perpIntercept):
 
 
 
-def SVM_update(midline, coloredCones, points):
+def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF FRAME
     # midline:      path-planning given midline     (MUST having ordering like a spline)
     # coloredCones: path-planning given coloredCones (CORRECT coordinates) : cones object
     # points:       all 3d coords of all cones in current frame
@@ -126,8 +126,8 @@ def SVM_update(midline, coloredCones, points):
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-    idxBlue = get_closest_point_idx(cones.blue_cones, (0,0))
-    idxYellow = get_closest_point_idx(cones.yellow_cones, (0,0))
+    idxBlue = get_closest_point_idx(cones.blue_cones, midline[-1])
+    idxYellow = get_closest_point_idx(cones.yellow_cones, midline[-1])
     
     farBlue = cones.blue_cones[idxBlue]
     farYellow = cones.blue_cones[idxYellow]

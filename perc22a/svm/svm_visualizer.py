@@ -137,7 +137,7 @@ print("perpSlope: " + str(perpSlope))
 print("perpIntercept: " + str(perpIntercept))
 print(classed)
 
-# ---------------------------------------------------------------------
+print("---------------------------------------------------------------------") 
 
 print("\nTest2 with y = 3x + 4 slope")
 slopeVec = (1,-3,0)
@@ -161,3 +161,14 @@ print("perpIntercept: " + str(perpIntercept))
 print(classed)
 print(slopes)
 print(intercepts)
+
+print("----------------------------------------------------------------")
+print("\nTesting conesBeforeLine")
+
+perpSlope2 = -2
+perpIntercept2 = 4
+
+newList = conesBeforeLine(points, perpSlope2, perpIntercept2)
+
+print("\n Class result:")
+print(newList)
