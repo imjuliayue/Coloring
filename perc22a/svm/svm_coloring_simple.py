@@ -1,4 +1,5 @@
 import numpy as np
+from svm_dependents import *
 from perc22a.predictors.utils.cones import Cones
 
 # TODO: need to import SVM class and Cones class
@@ -9,7 +10,7 @@ def midlineToLine(midline):
 
     # OUTPUT:       the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
 
-    if midline.size == 0 or midline.size == 1:
+    if len(midline) == 0 or len(midline) == 1:
         return (0,1,0), 0
 
     # take last two points
@@ -98,7 +99,7 @@ def SVM_update(midline, coloredCones, points):
     #   TODO: only output classifications of new cones!!!
 
     # Create an SVM class
-    SVM = SVM()
+    # SVM = SVM()
 
     # rid of coloredCones in points using setminus
     npColored = np.array(coloredCones)

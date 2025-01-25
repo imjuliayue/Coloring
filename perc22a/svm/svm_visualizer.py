@@ -105,4 +105,5 @@ plt.title('3D Splines and Clusters')
 # plt.show()
 
 # testing with the simple coloring algorithm
-midlineToLine(spline)
+midline_pts = np.column_stack((X, Y))
+slopeVec, intercept = midlineToLine(midline_pts)
