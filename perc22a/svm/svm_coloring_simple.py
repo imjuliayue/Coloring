@@ -1,6 +1,7 @@
 import numpy as np
 from svm_dependents import *
 from perc22a.predictors.utils.cones import Cones
+from svm_dependents import *
 
 # TODO: need to import SVM class and Cones class
 
@@ -20,8 +21,9 @@ def midlineToLine(midline):
     # slope
     slopeVec = lastPoint - secondLP
 
+    # vertical line
     if slopeVec[0] == 0:
-        return (0,1,0), slopeVec[1]
+        return (0,1,0), slopeVec[0]     # return x-intercept instead
 
     slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
 
@@ -44,19 +46,32 @@ def classify(slopeVec, intercept, point):
     # perpSlope:        Slope of perpendicular line including point (SCALAR)
     # perpIntercept:    intercept of perpendicular line including point (SCALAR)
 
-    # find perpendicular line with 'point' in it
-    slope = slopeVec[0] / slopeVec[1]
-    perpSlope = slopeVec[1] * -1 / slopeVec[0]      # -y/x (x is forward direction)
+    # CORNER CASES
+    # Case 1: slope is vertical line
+    if slopeVec[0] == 0:
+        return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, 0, point[1]
 
-    perpIntercept = perpSlope * point[1] - point[0] # b = my - x
+    # Case 2: slope is horizontal line
+    if slopeVec[1] == 0:
+        return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, None, point[0]
+
+
+    # find perpendicular line with 'point' in it
+
+    slope = slopeVec[1] / slopeVec[0]
+    perpSlope = slopeVec[0] * -1 / slopeVec[1]      # -y/x (y is forward direction)
+
+    perpIntercept =  point[1] - perpSlope * point[0] # b = y - mx
 
     # find the pt on the line to compare 'point' to: m1x + b1 = m2x + b2 --> x = (b2 - b1)/(m1 - m2)
-    x = (perpIntercept - intercept) / (perpSlope - slope)
+    x = (intercept - perpIntercept) / (perpSlope - slope)
 
     y = perpSlope * x + perpIntercept
 
-    # classify y by taking difference between point and (x,y)s' y components
-    direction = point[1] - y
+    print("x,y: " + str((x,y)))
+
+    # classify y by taking difference between point and (x,y)s' x components
+    direction = point[0] - x
 
     classification = 0
 
@@ -183,7 +198,7 @@ def SVM_update(midline, coloredCones, points):
                 farYellow = point2
 
         # plug into SVM
-        midline = cones_to_midline(cones)
+        midline = SVM.cones_to_midline(cones)
 
     # return the cones
     return cones
