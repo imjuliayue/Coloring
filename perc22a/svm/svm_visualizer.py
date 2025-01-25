@@ -107,3 +107,5 @@ plt.title('3D Splines and Clusters')
 # testing with the simple coloring algorithm
 midline_pts = np.column_stack((X, Y))
 slopeVec, intercept = midlineToLine(midline_pts)
+colored_cones = Cones()
+SVM_update(midline_pts, colored_cones, points_above.tolist())

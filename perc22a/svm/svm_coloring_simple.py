@@ -67,6 +67,8 @@ def classify(slopeVec, intercept, point):
 
 
 def get_closest_point_idx(points, curr_point):
+    # TODO: for testing, create "colored cones" so that points isn't empty list
+    assert(points.size > 0)
     # gets index of point in points farthest from curr_point and returns the dist
     assert(points.shape[1] == curr_point.shape[0])
 
@@ -112,8 +114,8 @@ def SVM_update(midline, coloredCones, points):
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-    idxBlue = get_closest_point_idx(cones.blue_cones, (0,0))
-    idxYellow = get_closest_point_idx(cones.yellow_cones, (0,0))
+    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), (0,0))
+    idxYellow = get_closest_point_idx(np.array(cones.yellow_cones), (0,0))
     
     farBlue = cones.blue_cones[idxBlue]
     farYellow = cones.blue_cones[idxYellow]
