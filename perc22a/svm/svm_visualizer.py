@@ -85,6 +85,8 @@ spline_left, spline_right = generate_parallel_splines(spline, offset=3, bend_fac
 points_above = generate_points_above_splines(spline_left, spline_right, height=0.5, num_points=3)
 clusters = generate_clusters_around_points(points_above, cluster_size=80, base_radius_x=1.0, height=0.8)
 
+print(points_above)
+
 # Plot the splines and clusters
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111, projection='3d')

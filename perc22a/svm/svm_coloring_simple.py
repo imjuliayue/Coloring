@@ -111,12 +111,14 @@ def initClassification(points, cones, SVM):                                     
     # Get one of the closest points and add to Cones
     idx, _ = get_closest_point_idx(points, np.array((0,0,0)))       # function is in SVM.py
     pt1 = points[idx]
-    np.delete(points, idx)                                            # remove classified point
+    points = np.delete(points, idx, axis=0)                                        # remove classified point
+
+
 
     # Get second closest point and add to Cones
     idx2, _ = get_closest_point_idx(points, np.array((0,0,0)))
     pt2 = points[idx2]
-    np.delete(points, idx2)                                            # remove classified point
+    points = np.delete(points, idx2, axis=0)                                            # remove classified point
 
     # Classify these cones as left or right
     y1 = pt1[1]
@@ -131,7 +133,13 @@ def initClassification(points, cones, SVM):                                     
     cones.add_blue_cone(blue[0], blue[1], blue[2])
     cones.add_yellow_cone(yellow[0], yellow[1], yellow[2])
 
-    return SVM.cones_to_midline(cones)
+    print(cones)
+
+    midline = SVM.cones_to_midline(cones)
+
+    print(cones)
+
+    return SVM.cones_to_midline(cones), points
 
 
 
@@ -149,37 +157,45 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
 
     # corner case: coloredCones is empty.
     if len(coloredCones) == 0:
-        midline = initClassification(points, coloredCones, svm)
+        midline, points = initClassification(points, coloredCones, svm)
     
-    print(midline)
 
     # rid of coloredCones in points using setminus
+    print(coloredCones)
+    print(coloredCones)
+    print(coloredCones)
     npColored = np.array(np.concatenate((coloredCones.blue_cones, coloredCones.yellow_cones)))
-    npPoints = np.array(points)       
+    npPoints = np.array(points) 
 
-    points = np.setdiff1d(npPoints, npColored).tolist()     # Note: now points is coords of UNCLASSIFIED cones
+    print(npColored)      
+    print(npPoints)      
+
+
+    points = np.diff([npPoints, npColored], axis=0)     # Note: now points is coords of UNCLASSIFIED cones
+    print(points)
 
     # make a new cones class and pass these colored cones into it
     cones = Cones()
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), np.array(midline[-1]))
-    idxYellow = get_closest_point_idx(cones.yellow_cones, midline[-1])
+    idxBlue, _ = get_closest_point_idx(np.array(cones.blue_cones), np.append(np.array(midline[-1]),0))
+    idxYellow, _ = get_closest_point_idx(np.array(cones.yellow_cones), np.append(np.array(midline[-1]),0))
+
 
     farBlue = cones.blue_cones[idxBlue]
     farYellow = cones.blue_cones[idxYellow]
 
     # classify all the points
-    while(points.size > 0):
+    while(len(points) > 0):
         # extend the line
         slopeVec, intercept = midlineToLine(midline)
         slope = slopeVec[0] / slopeVec[1]
 
         # choose the points to classify
-        point1 = get_closest_point_idx(points, farBlue)
+        point1 = get_closest_point_idx(np.array(points), farBlue)
         points.remove(point1)
-        point2 = get_closest_point_idx(points, farYellow)
+        point2 = get_closest_point_idx(np.array(points), farYellow)
         points.remove(point2)
 
         # classify them
