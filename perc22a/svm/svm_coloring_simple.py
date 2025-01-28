@@ -1,7 +1,8 @@
 import numpy as np
 from svm_dependents import *
-from perc22a.predictors.utils.cones import Cones
-from svm_dependents import *
+from perc22a.svm.cones import Cones
+from perc22a.svm.SVM import SVM
+# from svm_dependents import *
 
 # TODO: need to import SVM class and Cones class
 
@@ -104,6 +105,34 @@ def conesBeforeLine(points, perpSlope, perpIntercept):
     
     return newList
 
+def initClassification(points, cones, SVM):                                          # WIP
+    # returns: VOID
+
+    # Get one of the closest points and add to Cones
+    idx, _ = get_closest_point_idx(points, np.array((0,0,0)))       # function is in SVM.py
+    pt1 = points[idx]
+    np.delete(points, idx)                                            # remove classified point
+
+    # Get second closest point and add to Cones
+    idx2, _ = get_closest_point_idx(points, np.array((0,0,0)))
+    pt2 = points[idx2]
+    np.delete(points, idx2)                                            # remove classified point
+
+    # Classify these cones as left or right
+    y1 = pt1[1]
+    y2 = pt2[1]
+    blue = pt1
+    yellow = pt2
+
+    if y1 > y2:
+        blue = pt2
+        yellow = pt1
+    
+    cones.add_blue_cone(blue[0], blue[1], blue[2])
+    cones.add_yellow_cone(yellow[0], yellow[1], yellow[2])
+
+    return SVM.cones_to_midline(cones)
+
 
 
 
@@ -116,11 +145,17 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     #   TODO: only output classifications of new cones!!!
 
     # Create an SVM class
-    # SVM = SVM()
+    svm = SVM()
+
+    # corner case: coloredCones is empty.
+    if len(coloredCones) == 0:
+        midline = initClassification(points, coloredCones, svm)
+    
+    print(midline)
 
     # rid of coloredCones in points using setminus
-    npColored = np.array(coloredCones)
-    npPoints = np.array(points)             
+    npColored = np.array(np.concatenate((coloredCones.blue_cones, coloredCones.yellow_cones)))
+    npPoints = np.array(points)       
 
     points = np.setdiff1d(npPoints, npColored).tolist()     # Note: now points is coords of UNCLASSIFIED cones
 
@@ -129,7 +164,7 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-    idxBlue = get_closest_point_idx(cones.blue_cones, midline[-1])
+    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), np.array(midline[-1]))
     idxYellow = get_closest_point_idx(cones.yellow_cones, midline[-1])
 
     farBlue = cones.blue_cones[idxBlue]

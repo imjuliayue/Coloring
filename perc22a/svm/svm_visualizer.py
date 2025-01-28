@@ -5,6 +5,7 @@ from scipy.interpolate import make_interp_spline
 from mpl_toolkits.mplot3d import Axes3D
 # from perc22a.predictors.utils.cones import Cones
 from svm_coloring_simple import *
+from perc22a.svm.cones import Cones
 
 '''
     Generate Spline
@@ -105,7 +106,7 @@ ax.set_zlabel('Z-axis')
 ax.legend()
 plt.title('3D Splines and Clusters')
 
-plt.show()
+# plt.show()
 
 # testing with the simple coloring algorithm
 slopeVec, intercept = midlineToLine([])
@@ -123,56 +124,64 @@ for cone in points_above:
     
 
 
-print ("Cones: ")
-print (points_above)
+# print ("Cones: ")
+# print (points_above)
 
-print()
+# print()
 
-print("Midline_to_line result:")
-print("slopeVec: " + str(slopeVec))
-print("slopeIntercept: " + str(intercept))
+# print("Midline_to_line result:")
+# print("slopeVec: " + str(slopeVec))
+# print("slopeIntercept: " + str(intercept))
 
-print("\nClassification result:")
-print("perpSlope: " + str(perpSlope))
-print("perpIntercept: " + str(perpIntercept))
-print(classed)
+# print("\nClassification result:")
+# print("perpSlope: " + str(perpSlope))
+# print("perpIntercept: " + str(perpIntercept))
+# print(classed)
 
-print("---------------------------------------------------------------------") 
+# print("---------------------------------------------------------------------") 
 
-print("\nTest2 with y = 3x + 4 slope")
-slopeVec = (1,-3,0)
-intercept = 3
-points = [(0,0,0), (-2,1,0), (2,4,0), (-4,7,0)]
+# print("\nTest2 with y = 3x + 4 slope")
+# slopeVec = (1,-3,0)
+# intercept = 3
+# points = [(0,0,0), (-2,1,0), (2,4,0), (-4,7,0)]
 
-classed = []
-slopes = []
-intercepts = []
+# classed = []
+# slopes = []
+# intercepts = []
 
-for cone in points:
-    classification, perpSlope, perpIntercept = classify(slopeVec, intercept, cone)
+# for cone in points:
+#     classification, perpSlope, perpIntercept = classify(slopeVec, intercept, cone)
 
-    classed.append(classification)
-    slopes.append(perpSlope)
-    intercepts.append(perpIntercept)
+#     classed.append(classification)
+#     slopes.append(perpSlope)
+#     intercepts.append(perpIntercept)
 
-print("\nClassification result:")
-print("perpSlope: " + str(perpSlope))
-print("perpIntercept: " + str(perpIntercept))
-print(classed)
-print(slopes)
-print(intercepts)
+# print("\nClassification result:")
+# print("perpSlope: " + str(perpSlope))
+# print("perpIntercept: " + str(perpIntercept))
+# print(classed)
+# print(slopes)
+# print(intercepts)
+
+# print("----------------------------------------------------------------")
+# print("\nTesting conesBeforeLine")
+
+# perpSlope2 = -2
+# perpIntercept2 = 4
+
+# newList = conesBeforeLine(points, perpSlope2, perpIntercept2)
+
+# print("\n Class result:")
+# print(newList)
 
 print("----------------------------------------------------------------")
-print("\nTesting conesBeforeLine")
+print("\nJulia: Testing SVM_Update")
+result = SVM_update([], Cones(), points_above)
 
-perpSlope2 = -2
-perpIntercept2 = 4
 
-newList = conesBeforeLine(points, perpSlope2, perpIntercept2)
-
-print("\n Class result:")
-print(newList)
-midline_pts = np.column_stack((X, Y))
-slopeVec, intercept = midlineToLine(midline_pts)
-colored_cones = Cones()
-SVM_update(midline_pts, colored_cones, points_above.tolist())
+# print("----------------------------------------------------------------")
+# print("\nJulie: Testing SVM_Update")
+# midline_pts = np.column_stack((X, Y))
+# slopeVec, intercept = midlineToLine(midline_pts)
+# colored_cones = Cones()
+# SVM_update(midline_pts, colored_cones, points_above.tolist())
