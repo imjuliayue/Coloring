@@ -1,9 +1,9 @@
 
-from perc22a.predictors.utils.cones import Cones
+from perc22a.svm.cones import Cones
 from perc22a.utils.Timer import Timer
-from perc22a.predictors.utils.vis.Vis2D import Vis2D
+# from perc22a.predictors.utils.vis.Vis2D import Vis2D
 
-import perc22a.predictors.utils.lidar.color as color
+# import perc22a.predictors.utils.lidar.color as color
 
 from sklearn import svm
 import numpy as np
