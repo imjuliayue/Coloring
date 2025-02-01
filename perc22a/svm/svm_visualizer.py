@@ -180,6 +180,8 @@ print("----------------------------------------------------------------")
 print("\nJulia: Testing SVM_Update")
 result = SVM_update([], Cones(), points_above)
 
+print(result)
+
 
 # print("----------------------------------------------------------------")
 # print("\nJulie: Testing SVM_Update")
