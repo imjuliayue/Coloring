@@ -272,7 +272,7 @@ class SVM():
             return []
         
         # augment dataset to make it better for SVM training  
-        self.supplement_cones(cones)
+        # self.supplement_cones(cones)
         aug_cones = self.augment_cones_circle(cones, deg=10, radius=1.2) 
 
         X, y = self.cones_to_xy(aug_cones)
