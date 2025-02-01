@@ -162,17 +162,19 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
 
     # rid of coloredCones in points using setminus
     print(coloredCones)
-    print(coloredCones)
-    print(coloredCones)
     npColored = np.array(np.concatenate((coloredCones.blue_cones, coloredCones.yellow_cones)))
     npPoints = np.array(points) 
 
-    print(npColored)      
-    print(npPoints)      
+    print("npColored:\n" + str(npColored))      
+    print("npPoints:\n" + str(npPoints))      
 
 
-    points = np.diff([npPoints, npColored], axis=0)     # Note: now points is coords of UNCLASSIFIED cones
-    print(points)
+
+    # points = np.diff(np.array([npPoints, npColored]), axis=1)     # Note: now points is coords of UNCLASSIFIED cones
+    npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in npColored)])
+    print("npPoints after:\n" + str(npPoints))      
+
+    points = npPoints.tolist()
 
     # make a new cones class and pass these colored cones into it
     cones = Cones()
@@ -183,8 +185,11 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     idxYellow, _ = get_closest_point_idx(np.array(cones.yellow_cones), np.append(np.array(midline[-1]),0))
 
 
-    farBlue = cones.blue_cones[idxBlue]
-    farYellow = cones.blue_cones[idxYellow]
+    farBlue = np.array(cones.blue_cones[idxBlue])
+    farYellow = np.array(cones.blue_cones[idxYellow])
+
+    print("farBlue:\n" + str(farBlue))
+    print("farYellow:\n" + str(farYellow))
 
     # classify all the points
     while(len(points) > 0):
@@ -193,10 +198,14 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
         slope = slopeVec[0] / slopeVec[1]
 
         # choose the points to classify
-        point1 = get_closest_point_idx(np.array(points), farBlue)
-        points.remove(point1)
-        point2 = get_closest_point_idx(np.array(points), farYellow)
-        points.remove(point2)
+        point1,_ = get_closest_point_idx(np.array(points), farBlue)
+        print()
+        print("point1:\n" + str(points[point1]))
+        points.remove(points[point1])
+        point2,_ = get_closest_point_idx(np.array(points), farYellow)
+        print("point2:\n" + str(points[point2]))
+        points.remove(points[point2])
+        print("pointsAfterRemove:\n" + str(points))
 
         # classify them
         # TODO: improve modularity
