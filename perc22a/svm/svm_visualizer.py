@@ -81,8 +81,8 @@ flatness = random.uniform(0.1, 0.4)
 
 # Generate spline
 spline, X_smooth, Y_smooth, X, Y = generate_spline(flatness)
-spline_left, spline_right = generate_parallel_splines(spline, offset=3, bend_factor=5, num_points=500)
-points_above = generate_points_above_splines(spline_left, spline_right, height=0.5, num_points=3)
+spline_left, spline_right = generate_parallel_splines(spline, offset=3, bend_factor=5, num_points=1000)
+points_above = generate_points_above_splines(spline_left, spline_right, height=0.5, num_points=8)
 clusters = generate_clusters_around_points(points_above, cluster_size=80, base_radius_x=1.0, height=0.8)
 
 print(points_above)
@@ -108,7 +108,7 @@ ax.set_zlabel('Z-axis')
 ax.legend()
 plt.title('3D Splines and Clusters')
 
-# plt.show()
+plt.show()
 
 # testing with the simple coloring algorithm
 slopeVec, intercept = midlineToLine([])
@@ -178,7 +178,9 @@ for cone in points_above:
 
 print("----------------------------------------------------------------")
 print("\nJulia: Testing SVM_Update")
+points_above[:,2] = 0
 result = SVM_update([], Cones(), points_above)
+
 
 print(result)
 

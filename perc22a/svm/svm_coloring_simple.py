@@ -1,7 +1,7 @@
 import numpy as np
 from svm_dependents import *
-from perc22a.svm.cones import Cones
-from perc22a.svm.SVM import SVM
+from SVM import *
+from cones import *
 # from svm_dependents import *
 
 # TODO: need to import SVM class and Cones class
@@ -50,14 +50,20 @@ def classify(slopeVec, intercept, point):
     # CORNER CASES
     # Case 1: slope is vertical line
 
-    print()
-    print(str(slopeVec) + " " + str(intercept) + " " + str(point))
+    # print()
+    # print(str(slopeVec) + " " + str(intercept) + " " + str(point))
     if slopeVec[0] == 0:
-        return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, 0, point[1]
+        res = (1,0,0)
+        if slopeVec[1] < 0:
+            res = (-1,0,0)
+        return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, res, point[1]
 
     # Case 2: slope is horizontal line
     if slopeVec[1] == 0:
-        return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, None, point[0]
+        res = (0,1,0)
+        if(slopeVec[0] > 0):
+            res = (0,-1,0)
+        return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, res, point[0]
 
 
     # find perpendicular line with 'point' in it
@@ -72,7 +78,7 @@ def classify(slopeVec, intercept, point):
 
     y = perpSlope * x + perpIntercept
 
-    print("x,y: " + str((x,y)))
+    # print("x,y: " + str((x,y)))
 
     # classify y by taking difference between point and (x,y)s' x components
     direction = point[0] - x
@@ -82,7 +88,7 @@ def classify(slopeVec, intercept, point):
     if direction > 0 and slopeVec[1] > 0 or direction < 0 and slopeVec[1] < 0:
         classification = 1
 
-    return classification, perpSlope, perpIntercept
+    return classification, (0,perpSlope,0), perpIntercept
 
 
 def get_closest_point_idx(points, curr_point):
@@ -95,7 +101,7 @@ def get_closest_point_idx(points, curr_point):
     idx = np.argmin(sq_dists)
     return idx, np.sqrt(sq_dists[idx])
 
-def conesBeforeLine(points, perpSlope, perpIntercept):
+def conesBeforeLine(points, perpSlopeVec, perpIntercept):
     # finds all cones closer than farthest cone
     
     # OUTPUT: List of True/False at corresponding indices; True --> is closer.
@@ -103,7 +109,8 @@ def conesBeforeLine(points, perpSlope, perpIntercept):
     newList = []                    # holds True/False values
 
     for i in range(len(points)):               # classify function kind of does it lol
-        c, _, _ = classify((1,perpSlope,0), perpIntercept, points[i])
+        print(perpSlopeVec)
+        c, _, _ = classify(perpSlopeVec, perpIntercept, points[i])
         newList.append(c)
     
     return newList
@@ -194,17 +201,20 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
 
     # classify all the points
     while(len(points) > 0):
+
+        print("======================================")
+        print(len(points))
         # extend the line
         slopeVec, intercept = midlineToLine(midline)
-        slope = slopeVec[0] / slopeVec[1]
+        # slope = slopeVec[1] / slopeVec[0]
 
         
-        print("farBlue:\n" + str(farBlue))
-        print("farYellow:\n" + str(farYellow))
+        # print("farBlue:\n" + str(farBlue))
+        # print("farYellow:\n" + str(farYellow))
 
         # choose the points to classify
         idx1,_ = get_closest_point_idx(np.array(points), farBlue)
-        print()
+        # print()
         # print("point1:\n" + str(points[idx1]))
         point1 = points[idx1]
         points.remove(point1)
@@ -236,36 +246,42 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
         farthest = (point2, pSlope2, pIntercept2)
         # print("FARTHEST:\n" + str(farthest)) 
 
-        if(slope >= 0 and pIntercept1 > pIntercept2 or slope < 0 and pIntercept1 < pIntercept2):
+        if(slopeVec[1] >= 0 and pIntercept1 > pIntercept2 or slopeVec[1] < 0 and pIntercept1 < pIntercept2):
             farthest = (point1, pSlope1, pIntercept1)
+
+        print("farthest: (point, slope, intercept\n" + str(farthest))
 
         # if no more points, we are done!
         if(len(points) == 0):
             return cones
         
         # Find all cones within distance from line
-        nearCones = np.array(conesBeforeLine(points, farthest[1], farthest[2]))
+        # nearCones = np.array(conesBeforeLine(points, farthest[1], farthest[2]))
 
-        print("nearcones:\n" + str(nearCones))
+        # print(nearCones)
 
-        npPoints = np.array(points)
+        # # print("nearcones:\n" + str(nearCones))
 
-        nearPoints = npPoints[nearCones]                                                      # filter out False cones
-        npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in nearPoints)])
+        # npPoints = np.array(points)
 
-        points = npPoints.tolist()
+        # nearPoints = npPoints[nearCones]                                                      # filter out False cones
+        # npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in nearPoints)])
+
+        # points = npPoints.tolist()
 
         # points = np.setdiff1d(np.array(points), nearPoints).tolist()              # TODO: really please optimize this
-        print("fdsklafjlkdsajfkldsajflksajflkdajsfsad\n" + str(points))
+        # print("fdsklafjlkdsajfkldsajflksajflkdajsfsad\n" + str(points))
 
         # classify all these near points
-        for xy in nearPoints:
-            resXY, _, _ = classify(slopeVec, intercept, xy)
+        # for xy in nearPoints:
+        #     resXY, _, _ = classify(slopeVec, intercept, xy)
+
+        #     (xy0, xy1, xy2) = xy
             
-            if resXY:
-                cones.add_yellow_cone(xy)
-            else:
-                cones.add_blue_cone(xy)
+        #     if resXY:
+        #         cones.add_yellow_cone(xy0, xy1, xy2)
+        #     else:
+        #         cones.add_blue_cone(xy0, xy1, xy2)
 
         # update farBlue and farYellow (many cases; if same class, depends on farthest cone)
         if class1 == class2:
@@ -284,8 +300,12 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
 
         farBlue = np.array(farBlue)
         farYellow = np.array(farYellow)
+
+        print("farBlue: " + str(farBlue))
+        print("farYellow: " + str(farYellow))
         # plug into SVM
         midline = svm.cones_to_midline(cones)
+        print("cones:\n" + str(cones))
 
         # print(midline)
 
