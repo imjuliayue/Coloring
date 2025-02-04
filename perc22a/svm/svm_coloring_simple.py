@@ -3,6 +3,7 @@ from svm_dependents import *
 from SVM import *
 from cones import *
 from numpy.typing import NDArray
+import matplotlib.pyplot as plt
 # from svm_dependents import *
 
 # TODO: need to import SVM class and Cones class
@@ -213,14 +214,12 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     idxBlue = get_closest_point_idx(np.array(cones.blue_cones), np.append(np.array(midline[-1]),0))
     idxYellow = get_closest_point_idx(np.array(cones.yellow_cones), np.append(np.array(midline[-1]),0))
 
-
     farBlue = np.array(cones.blue_cones[idxBlue])
-    farYellow = np.array(cones.blue_cones[idxYellow])
+    farYellow = np.array(cones.yellow_cones[idxYellow])
 
-
+    num_loops = 0
     # classify all the points
     while(len(points) > 0):
-
         print("======================================")
         print(len(points))
         # extend the line
@@ -244,10 +243,16 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         points.remove(point2)
         # print("pointsAfterRemove:\n" + str(points))
 
+        print("point1: \n" + str(point1))
+        print("point2: \n" + str(point2))
+
         # classify them
         # TODO: improve modularity
         class1, pSlope1, pIntercept1 = classify(slopeVec, intercept, point1)
         class2, pSlope2, pIntercept2 = classify(slopeVec, intercept, point2)
+
+        print("class1: \n" + str(class1))
+        print("class2: \n" + str(class2))
 
         if class1:
             cones.add_yellow_cone(point1[0],point1[1],point1[2])
@@ -303,28 +308,50 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         #         cones.add_blue_cone(xy0, xy1, xy2)
 
         # update farBlue and farYellow (many cases; if same class, depends on farthest cone)
-        if class1 == class2:
-            if class1:
-                farYellow = farthest[0]
-            else:
-                farBlue = farthest[0]
-        else:
-            if class1:
-                farYellow = point1
-                farBlue = point2
-            else:
-                farBlue = point1
-                farYellow = point2
+        # if class1 == class2:
+        #     if class1:
+        #         farYellow = farthest[0]
+        #     else:
+        #         farBlue = farthest[0]
+        # else:
+        #     if class1:
+        #         farYellow = point1
+        #         farBlue = point2
+        #     else:
+        #         farBlue = point1
+        #         farYellow = point2
 
 
-        farBlue = np.array(farBlue)
-        farYellow = np.array(farYellow)
+        # farBlue = np.array(farBlue)
+        # farYellow = np.array(farYellow)
+
+        farBlue = np.array(cones.blue_cones[-1])
+        farYellow = np.array(cones.yellow_cones[-1])
 
         print("farBlue: " + str(farBlue))
         print("farYellow: " + str(farYellow))
         # plug into SVM
         midline = svm.cones_to_midline(cones)
+        print("midline: ")
+        print(midline)
         print("cones:\n" + str(cones))
+
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        bcones = np.array(cones.blue_cones)
+        ycones = np.array(cones.yellow_cones)
+        p = np.array(points)
+        ax.scatter(p[:, 0], p[:, 1], p[:, 2], color='black', label='pts', s=50)
+        ax.scatter(bcones[:, 0], bcones[:, 1], bcones[:, 2], color='blue', label='blue', s=50)
+        ax.scatter(ycones[:, 0], ycones[:, 1], ycones[:, 2], color='orange', label='orange', s=50)
+        ax.scatter(midline[:, 0], midline[:, 1], 0, color='red', label='midline', s=50)
+        ax.set_xlabel('X-axis')
+        ax.set_ylabel('Y-axis')
+        ax.set_zlabel('Z-axis')
+        ax.legend()
+        plt.title('3D Splines and Clusters')
+
+        plt.show()
 
         # print(midline)
 
