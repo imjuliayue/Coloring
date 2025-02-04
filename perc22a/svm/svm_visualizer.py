@@ -123,7 +123,11 @@ for cone in points_above:
 
     classed.append(classification)
 
-    
+print("----------------------------------------------------------------")
+print("\nJulia: Testing SVM_Update")
+points_above[:,2] = 0
+result = SVM_update([], Cones(), points_above)
+print(result)
 
 
 # print ("Cones: ")
@@ -175,19 +179,3 @@ for cone in points_above:
 
 # print("\n Class result:")
 # print(newList)
-
-print("----------------------------------------------------------------")
-print("\nJulia: Testing SVM_Update")
-points_above[:,2] = 0
-result = SVM_update([], Cones(), points_above)
-
-
-print(result)
-
-
-# print("----------------------------------------------------------------")
-# print("\nJulie: Testing SVM_Update")
-# midline_pts = np.column_stack((X, Y))
-# slopeVec, intercept = midlineToLine(midline_pts)
-# colored_cones = Cones()
-# SVM_update(midline_pts, colored_cones, points_above.tolist())

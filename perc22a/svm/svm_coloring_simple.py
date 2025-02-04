@@ -2,16 +2,21 @@ import numpy as np
 from svm_dependents import *
 from SVM import *
 from cones import *
+from numpy.typing import NDArray
 # from svm_dependents import *
 
 # TODO: need to import SVM class and Cones class
 
-def midlineToLine(midline):
-    # TODO: there's a chance slope could be 0. Possible solution: midlineToLine also outputs boolean to indicate y-intercept instead
-    # midline:      set of 3d points representing the midline for points; sorted from start to end of sorted track
-
-    # OUTPUT:       the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
-
+def midlineToLine(midline: NDArray):
+    """
+    Find 
+    Args:
+        midline: set of 3d points representing the midline for points; sorted from start to end of sorted track
+    Returns:
+        tuple(tuple(num, num, num), num): 
+            the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
+    TODO: there's a chance slope could be 0. Possible solution: midlineToLine also outputs boolean to indicate y-intercept instead
+    """
     if len(midline) == 0 or len(midline) == 1:
         return (0,1,0), 0
 
@@ -35,17 +40,18 @@ def midlineToLine(midline):
 
 
 def classify(slopeVec, intercept, point):
-    # TODO: there's a chance point ENDS UP on the line. Have a tie breaker.
-    # TODO: there's a chance slope could be 0. Possible solution: midlineToLine also outputs boolean to indicate y-intercept instead
-
-    # slopeVec:     3d vector representing slope. X is forward direction, Y is left/right direction
-    # intercept:    a numerical value (x-intercept)
-    # point:        the point to be classified
-
-    # OUTPUTS: 
-    # classification:   0 if blue and 1 if yellow
-    # perpSlope:        Slope of perpendicular line including point (SCALAR)
-    # perpIntercept:    intercept of perpendicular line including point (SCALAR)
+    """
+    Args:
+        slopeVec:     3d vector representing slope. X is forward direction, Y is left/right direction
+        intercept:    a numerical value (x-intercept)
+        point:        the point to be classified
+    Returns:
+        classification:   0 if blue and 1 if yellow
+        perpSlope:        Slope of perpendicular line including point (SCALAR)
+        perpIntercept:    intercept of perpendicular line including point (SCALAR)
+    TODO: there's a chance point ENDS UP on the line. Have a tie breaker.
+    TODO: there's a chance slope could be 0. Possible solution: midlineToLine also outputs boolean to indicate y-intercept instead
+    """
 
     # CORNER CASES
     # Case 1: slope is vertical line
@@ -91,15 +97,19 @@ def classify(slopeVec, intercept, point):
     return classification, (0,perpSlope,0), perpIntercept
 
 
-def get_closest_point_idx(points, curr_point):
-    # TODO: for testing, create "colored cones" so that points isn't empty list
+def get_closest_point_idx(points: NDArray, curr_point: NDArray) -> int:
+    """
+    Return index of coord in points closest to curr_point
+    TODO: for testing, create "colored cones" so that points isn't empty list
+    """
     assert(points.size > 0)
     # gets index of point in points farthest from curr_point and returns the dist
     assert(points.shape[1] == curr_point.shape[0])
 
     sq_dists = np.sum((points - curr_point) ** 2, axis=1)
     idx = np.argmin(sq_dists)
-    return idx, np.sqrt(sq_dists[idx])
+    return idx
+    # return idx, np.sqrt(sq_dists[idx])
 
 def conesBeforeLine(points, perpSlopeVec, perpIntercept):
     # finds all cones closer than farthest cone
@@ -115,18 +125,26 @@ def conesBeforeLine(points, perpSlopeVec, perpIntercept):
     
     return newList
 
-def initClassification(points, cones, SVM):                                          # WIP
-    # returns: VOID
+def initClassification(points: NDArray, cones: Cones, SVM: SVM) -> tuple[NDArray, NDArray]:                                          # WIP
+    """
+    Classify cone pair nearest to car.
+
+    Args:
+        points: all cone points
+        cones: current colored cones
+        SVM: current svm
+    Returns:
+        NDArray: midline points
+        NDArray: unclassified cone points
+    """
 
     # Get one of the closest points and add to Cones
-    idx, _ = get_closest_point_idx(points, np.array((0,0,0)))       # function is in SVM.py
+    idx = get_closest_point_idx(points, np.array((0,0,0)))       # function is in SVM.py
     pt1 = points[idx]
     points = np.delete(points, idx, axis=0)                                        # remove classified point
 
-
-
     # Get second closest point and add to Cones
-    idx2, _ = get_closest_point_idx(points, np.array((0,0,0)))
+    idx2 = get_closest_point_idx(points, np.array((0,0,0)))
     pt2 = points[idx2]
     points = np.delete(points, idx2, axis=0)                                            # remove classified point
 
@@ -144,29 +162,33 @@ def initClassification(points, cones, SVM):                                     
     cones.add_yellow_cone(yellow[0], yellow[1], yellow[2])
 
     print(cones)
-
-    midline = SVM.cones_to_midline(cones)
-
-    print(cones)
-
     return SVM.cones_to_midline(cones), points
 
+def filter_out_cones(cones_in: NDArray, cones_notin: NDArray) -> NDArray:
+    """Returns coordinates of cones_in \ cones_notin"""
+    combined = np.concatenate((cones_in, cones_notin))
+    return np.unique(combined, axis=0)
 
+def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:# SHOULD BE CALLED AT BEGINNING OF FRAME
+    """
+    Classify all cones at in current frame.
 
+    Args:
+        midline: midline points (MUST have ordering like a spline)
+        coloredCones: previously colored cones
+        points: cone coords in frame
+    Returns:
+        Cones: classified cones (including input)
 
-def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF FRAME
-    # midline:      path-planning given midline     (MUST having ordering like a spline)
-    # coloredCones: path-planning given coloredCones (CORRECT coordinates) : cones object
-    # points:       all 3d coords of all cones in current frame
-
-    # OUTPUT: colored cones (INCLUDING input)
-    #   TODO: only output classifications of new cones!!!
+    TODO: only output classifications of new cones!!!
+    """
 
     # Create an SVM class
     svm = SVM()
 
     # corner case: coloredCones is empty.
     if len(coloredCones) == 0:
+        print("Colored cones empty")
         midline, points = initClassification(points, coloredCones, svm)
     
 
@@ -177,9 +199,6 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
 
     print("npColored:\n" + str(npColored))      
     print("npPoints:\n" + str(npPoints))      
-
-
-
     # points = np.diff(np.array([npPoints, npColored]), axis=1)     # Note: now points is coords of UNCLASSIFIED cones
     npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in npColored)])
     print("npPoints after:\n" + str(npPoints))      
@@ -191,8 +210,8 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
     cones.add_cones(coloredCones)           # function in cones.py
 
     # find farthest blue and yellow cones (should be closest to last midline point)
-    idxBlue, _ = get_closest_point_idx(np.array(cones.blue_cones), np.append(np.array(midline[-1]),0))
-    idxYellow, _ = get_closest_point_idx(np.array(cones.yellow_cones), np.append(np.array(midline[-1]),0))
+    idxBlue = get_closest_point_idx(np.array(cones.blue_cones), np.append(np.array(midline[-1]),0))
+    idxYellow = get_closest_point_idx(np.array(cones.yellow_cones), np.append(np.array(midline[-1]),0))
 
 
     farBlue = np.array(cones.blue_cones[idxBlue])
@@ -213,13 +232,13 @@ def SVM_update(midline, coloredCones, points):# SHOULD BE CALLED AT BEGINNING OF
         # print("farYellow:\n" + str(farYellow))
 
         # choose the points to classify
-        idx1,_ = get_closest_point_idx(np.array(points), farBlue)
+        idx1 = get_closest_point_idx(np.array(points), farBlue)
         # print()
         # print("point1:\n" + str(points[idx1]))
         point1 = points[idx1]
         points.remove(point1)
 
-        idx2,_ = get_closest_point_idx(np.array(points), farYellow)
+        idx2 = get_closest_point_idx(np.array(points), farYellow)
         # print("point2:\n" + str(points[idx2]))
         point2 = points[idx2]
         points.remove(point2)
