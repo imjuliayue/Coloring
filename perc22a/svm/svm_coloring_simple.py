@@ -41,6 +41,79 @@ def midlineToLine(midline: NDArray):
     print(f"avg: slopevec-{sv}   intercept-{i}")
     return slopeVec, intercept
 
+def midlineToAvgLine(midline: NDArray, cones: Cones):
+    """
+    Find line through end of midline
+    Args:
+        midline: set of 3d points representing the midline for points; sorted from start to end of sorted track
+    Returns:
+        tuple(tuple(num, num, num), num): 
+            the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
+    """
+    if len(midline) == 0 or len(midline) == 1:
+        return (0,1,0), 0
+
+    # Take last two points
+    lastPoint = midline[-1]
+
+    # Get slopes between first & third, second & fourth furthest points
+    tailPts = midline[-1:-5:-1]
+    print(tailPts)
+    slopeVec1 = tailPts[0] - tailPts[2]  # Slopevec through 1 and 3
+    slopeVec2 = tailPts[2] - tailPts[3]  # Slopevec through 2 and 4
+    midSlopeVec = avgSlope(slopeVec1, slopeVec2)
+
+    # Weight with coneSlopeVec
+    if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones)):
+        coneSlopeVec = coneSlope(cones)
+        slopeVec = (midSlopeVec + .5*coneSlopeVec)/2
+    else:
+        slopeVec = midSlopeVec
+
+    # Vertical line
+    if slopeVec[0] == 0:
+        return (0,1,0), slopeVec[0]     # return x-intercept instead
+
+    slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
+    intercept = slope * lastPoint[0] - lastPoint[1]  # y = mx + b --> b = mx - y
+
+    return slopeVec, intercept
+
+def coneSlope(cones: Cones):
+    """
+    Args:
+        cones: all colored cones
+    Returns:
+        furthest two blue and yellow cone slopeVecs, averaged
+    """
+    # Grab furthest two blue and yellow cones
+    farB1 = np.array(cones.blue_cones[-1])
+    farB2 = np.array(cones.blue_cones[-2])
+    farY1 = np.array(cones.yellow_cones[-1])
+    farY2 = np.array(cones.yellow_cones[-2])
+
+    slopeBVec = farB1 - farB2
+    slopeYVec = farY1 - farY2
+    coneSlopeVec = avgSlope(slopeBVec, slopeYVec)
+    return coneSlopeVec[:2]
+
+def avgSlope(slopeVec1, slopeVec2):
+    # Check if either line is vertical
+    if slopeVec2[0] == 0:
+        if slopeVec1[0] == 0:               # Both vertical
+            return (0, 1, 0)
+        else:                               # Only 2 vertical
+            slopeVec1[0] /= 2
+            avgSlopeVec = slopeVec1
+    else:
+        if slopeVec1[0] == 0:               # Only 1 vertical
+            slopeVec2[0] /= 2
+            avgSlopeVec = slopeVec2
+        else:                               # Both not vertical
+            avgSlopeVec = (slopeVec1 + slopeVec2)/2
+
+    return avgSlopeVec
+
 def classify(slopeVec, intercept, point):
     """
     Args:
@@ -220,13 +293,14 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     farBlue = np.array(cones.blue_cones[idxBlue])
     farYellow = np.array(cones.yellow_cones[idxYellow])
 
+    loopCt = 0
     # Iteratively classify all the points
     while(len(points) > 0):
         print("======================================")
         print(f"Num points: {len(points)}")
         # Find line extending end of midlline
         # slopeVec0 = midlineToLine(midline)
-        slopeVec, intercept = midlineToLine(midline)
+        slopeVec, intercept = midlineToAvgLine(midline, cones)
         # print(f"slope0: {slopeVec0[1]/slopeVec0[0]}  slope1: {slopeVec[1]/slopeVec[0]} ")
         
         # print("farBlue:\n" + str(farBlue))
@@ -274,57 +348,11 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         if(slopeVec[1] >= 0 and pIntercept1 > pIntercept2 or slopeVec[1] < 0 and pIntercept1 < pIntercept2):
             farthest = (point1, pSlope1, pIntercept1)
 
-        print("farthest: (point, slope, intercept\n" + str(farthest) + ")")
+        # print("farthest: (point, slope, intercept\n" + str(farthest) + ")")
 
         # if no more points, we are done!
         if(len(points) == 0):
             return cones
-        
-        # Find all cones within distance from line
-        # nearCones = np.array(conesBeforeLine(points, farthest[1], farthest[2]))
-
-        # print(nearCones)
-
-        # # print("nearcones:\n" + str(nearCones))
-
-        # npPoints = np.array(points)
-
-        # nearPoints = npPoints[nearCones]                                                      # filter out False cones
-        # npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in nearPoints)])
-
-        # points = npPoints.tolist()
-
-        # points = np.setdiff1d(np.array(points), nearPoints).tolist()              # TODO: really please optimize this
-        # print("fdsklafjlkdsajfkldsajflksajflkdajsfsad\n" + str(points))
-
-        # classify all these near points
-        # for xy in nearPoints:
-        #     resXY, _, _ = classify(slopeVec, intercept, xy)
-
-        #     (xy0, xy1, xy2) = xy
-            
-        #     if resXY:
-        #         cones.add_yellow_cone(xy0, xy1, xy2)
-        #     else:
-        #         cones.add_blue_cone(xy0, xy1, xy2)
-
-        # update farBlue and farYellow (many cases; if same class, depends on farthest cone)
-        # if class1 == class2:
-        #     if class1:
-        #         farYellow = farthest[0]
-        #     else:
-        #         farBlue = farthest[0]
-        # else:
-        #     if class1:
-        #         farYellow = point1
-        #         farBlue = point2
-        #     else:
-        #         farBlue = point1
-        #         farYellow = point2
-
-
-        # farBlue = np.array(farBlue)
-        # farYellow = np.array(farYellow)
 
         farBlue = np.array(cones.blue_cones[-1])
         farYellow = np.array(cones.yellow_cones[-1])
@@ -333,7 +361,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         print("farYellow: " + str(farYellow))
         # plug into SVM
         midline = svm.cones_to_midline(cones)
-        print("midline: ")
+        # print("midline: ")
         # print(midline)
         print("cones:\n" + str(cones))
 
