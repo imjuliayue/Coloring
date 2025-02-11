@@ -33,8 +33,8 @@ def midlineToLine(midline: NDArray):
 
     slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
 
-    # intercept (use y = mx + b --> b = mx - y)
-    intercept = slope * lastPoint[0] - lastPoint[1]
+    # intercept (use y = mx + b --> b = y - mx)
+    intercept = lastPoint[1] - slope * lastPoint[0]
 
     sv, i = midlineToAvgLine(midline)
     print(f"normal: slopevec-{slopeVec}   intercept-{intercept}")
@@ -52,21 +52,21 @@ def midlineToAvgLine(midline: NDArray, cones: Cones):
     """
     if len(midline) == 0 or len(midline) == 1:
         return (0,1,0), 0
-
-    # Take last two points
+    
     lastPoint = midline[-1]
 
     # Get slopes between first & third, second & fourth furthest points
-    tailPts = midline[-1:-5:-1]
-    print(tailPts)
-    slopeVec1 = tailPts[0] - tailPts[2]  # Slopevec through 1 and 3
-    slopeVec2 = tailPts[2] - tailPts[3]  # Slopevec through 2 and 4
+    tailPts = midline[-1:-5:-1]  # Points ordered in descending distance
+
+    slopeVec1 = np.append(tailPts[0] - tailPts[2], [0])  # Slopevec through 1 and 3
+    slopeVec2 = np.append(tailPts[1] - tailPts[3], [0])  # Slopevec through 2 and 4
+    print(f"sv1 {slopeVec1} sv2 {slopeVec2}")
     midSlopeVec = avgSlope(slopeVec1, slopeVec2)
 
     # Weight with coneSlopeVec
-    if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones)):
+    if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones) >= 2):
         coneSlopeVec = coneSlope(cones)
-        slopeVec = (midSlopeVec + .5*coneSlopeVec)/2
+        slopeVec = (.8*midSlopeVec + coneSlopeVec)/2
     else:
         slopeVec = midSlopeVec
 
@@ -75,7 +75,8 @@ def midlineToAvgLine(midline: NDArray, cones: Cones):
         return (0,1,0), slopeVec[0]     # return x-intercept instead
 
     slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
-    intercept = slope * lastPoint[0] - lastPoint[1]  # y = mx + b --> b = mx - y
+    intercept = lastPoint[1] - slope * lastPoint[0] # y = mx + b --> b = y - mx
+    print(f"Slopevec: {slopeVec}, intercept: {intercept}")
 
     return slopeVec, intercept
 
@@ -95,13 +96,13 @@ def coneSlope(cones: Cones):
     slopeBVec = farB1 - farB2
     slopeYVec = farY1 - farY2
     coneSlopeVec = avgSlope(slopeBVec, slopeYVec)
-    return coneSlopeVec[:2]
+    return coneSlopeVec
 
 def avgSlope(slopeVec1, slopeVec2):
     # Check if either line is vertical
     if slopeVec2[0] == 0:
         if slopeVec1[0] == 0:               # Both vertical
-            return (0, 1, 0)
+            return np.array([0,1,0])
         else:                               # Only 2 vertical
             slopeVec1[0] /= 2
             avgSlopeVec = slopeVec1
