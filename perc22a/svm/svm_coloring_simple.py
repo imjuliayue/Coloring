@@ -4,83 +4,80 @@ from SVM import *
 from cones import *
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
+import math
 # from svm_dependents import *
 
-# TODO: need to import SVM class and Cones class
-
-def midlineToLine(midline: NDArray):
+class Slope:
     """
-    Find line through end of midline
-    Args:
-        midline: set of 3d points representing the midline for points; sorted from start to end of sorted track
-    Returns:
-        tuple(tuple(num, num, num), num): 
-            the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
+    Fields
+        mx, my: scalar slope vector components
+        slope: scalar slope value
+        isVert, isHoriz: indicates vertical/horizontal slope
+        dirPos: direction of slope if vertical/horizontal
+    Notes
+        (mx, my) = None if (isVert or isHoriz) else (float, float)
+        slope = my/mx if (not (isVert or isHoriz)) else None
+        dirPos = None if (not (isVert or isHoriz)) else (y > 0 and isVert) or (x > 0 and isHoriz)
     """
-    if len(midline) == 0 or len(midline) == 1:
-        return (0,1,0), 0
+    def __init__(self, mx: float = None, my: float = None, slope = None,
+                 vert: bool = False, horiz: bool = False, dirPos: bool = None):
+        assert ((mx is not None and my is not None) or slope or vert or horiz)
+        assert (not (mx == 0 and my == 0))
+        self.isVert = self.isHoriz = False
+        self.dirPos = dirPos
+        if slope:
+            self.slope = slope
+        elif vert or mx == 0:
+            assert not mx and not horiz
+            self.isVert = True
+            self.slope = None
+        elif horiz or my == 0:
+            assert not my and not vert
+            self.isHoriz = True
+            self.slope = None
+        else:
+            self.slope = my/mx
 
-    # take last two points
-    lastPoint = midline[-1]
-    secondLP = midline[-2]
+class Line(Slope):
+    def __init__(self, slope_x: float = None, slope_y: float = None, slope = None,
+                 intercept: float = 0, vert: bool = False, horiz: bool = False, dirPos: bool = None):
+        Slope.__init__(self, slope_x, slope_y, slope, vert, horiz, dirPos)
+        self.intercept = intercept
 
-    # # slope
-    slopeVec = lastPoint - secondLP
+def getAvgSlope(slope1: Slope, slope2: Slope, w1: int = 1, w2: int = 1) -> Slope:
+        """Returns average of the two slopes as a Slope class"""
+        if slope2.isVert:
+            if slope1.isVert:           # Both vertical
+                return Slope(vert=True, dirPos=slope1.dirPos)
+            else:                       # Avg slope 1 with vertical
+                theta = math.atan(slope1.slope)
+                if theta >= 0:
+                    vert = math.radians(90)
+                else:
+                    vert = math.radians(-90)
+                return Slope(slope=math.tan((vert+theta)/2))
+        else:
+            if slope1.isVert:           # Avg slope 2 with vertical
+                angle = math.atan(slope2.slope)
+                if angle >= 0:
+                    vert = math.radians(90)
+                else:
+                    vert = math.radians(-90)
+                return Slope(slope=math.tan((vert+angle)/2))
+            else:                       # Both not vertical
+                theta1 = math.atan(slope1.slope)
+                theta2 = math.atan(slope2.slope)
+                thetaAvg = (w1*theta1 + w2*theta2)/(w1+w2)
+                dirPos = None
+                if thetaAvg == 0:  # This just shouldn't happen
+                    dirPos = True
+                elif math.degrees(thetaAvg) == 90:
+                    dirPos = True
+                elif math.degrees(thetaAvg) == -90:
+                    dirPos = False
+                return Slope(slope=math.tan(thetaAvg), dirPos=dirPos)
 
-    # # vertical line
-    if slopeVec[0] == 0:
-        return (0,1,0), slopeVec[0]     # return x-intercept instead
-
-    slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
-
-    # intercept (use y = mx + b --> b = y - mx)
-    intercept = lastPoint[1] - slope * lastPoint[0]
-
-    sv, i = midlineToAvgLine(midline)
-    print(f"normal: slopevec-{slopeVec}   intercept-{intercept}")
-    print(f"avg: slopevec-{sv}   intercept-{i}")
-    return slopeVec, intercept
-
-def midlineToAvgLine(midline: NDArray, cones: Cones):
-    """
-    Find line through end of midline
-    Args:
-        midline: set of 3d points representing the midline for points; sorted from start to end of sorted track
-    Returns:
-        tuple(tuple(num, num, num), num): 
-            the slope and intercept of the line (slope, intercept) which are a 3d vector and a scalar (x-intercept)
-    """
-    if len(midline) == 0 or len(midline) == 1:
-        return (0,1,0), 0
-    
-    lastPoint = midline[-1]
-
-    # Get slopes between first & third, second & fourth furthest points
-    tailPts = midline[-1:-5:-1]  # Points ordered in descending distance
-
-    slopeVec1 = np.append(tailPts[0] - tailPts[2], [0])  # Slopevec through 1 and 3
-    slopeVec2 = np.append(tailPts[1] - tailPts[3], [0])  # Slopevec through 2 and 4
-    print(f"sv1 {slopeVec1} sv2 {slopeVec2}")
-    midSlopeVec = avgSlope(slopeVec1, slopeVec2)
-
-    # Weight with coneSlopeVec
-    if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones) >= 2):
-        coneSlopeVec = coneSlope(cones)
-        slopeVec = (.8*midSlopeVec + coneSlopeVec)/2
-    else:
-        slopeVec = midSlopeVec
-
-    # Vertical line
-    if slopeVec[0] == 0:
-        return (0,1,0), slopeVec[0]     # return x-intercept instead
-
-    slope = slopeVec[1]/slopeVec[0]     # = y/x (y is forward direction)
-    intercept = lastPoint[1] - slope * lastPoint[0] # y = mx + b --> b = y - mx
-    print(f"Slopevec: {slopeVec}, intercept: {intercept}")
-
-    return slopeVec, intercept
-
-def coneSlope(cones: Cones):
+def getConeSlope(cones: Cones):
     """
     Args:
         cones: all colored cones
@@ -93,34 +90,53 @@ def coneSlope(cones: Cones):
     farY1 = np.array(cones.yellow_cones[-1])
     farY2 = np.array(cones.yellow_cones[-2])
 
-    slopeBVec = farB1 - farB2
-    slopeYVec = farY1 - farY2
-    coneSlopeVec = avgSlope(slopeBVec, slopeYVec)
-    return coneSlopeVec
+    slopeB = Slope(farB1[0] - farB2[0], farB1[1] - farB2[1])
+    slopeY = Slope(farY1[0] - farY2[0], farY1[1] - farY2[1])
+    return getAvgSlope(slopeB, slopeY)
 
-def avgSlope(slopeVec1, slopeVec2):
-    # Check if either line is vertical
-    if slopeVec2[0] == 0:
-        if slopeVec1[0] == 0:               # Both vertical
-            return np.array([0,1,0])
-        else:                               # Only 2 vertical
-            slopeVec1[0] /= 2
-            avgSlopeVec = slopeVec1
+def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
+    """
+    Find line through end of midline
+    Args:
+        midline: set of 3d points representing the midline for points; sorted from start to end of sorted track
+    Returns:
+        Line: line extending midline
+    """
+    if len(midline) == 0 or len(midline) == 1:
+        return Line(vert=True, dirPos = True, intercept=0)
+    
+    lastPoint = midline[-1]
+
+    # Get slopes between first & third, second & fourth furthest points
+    tailPts = midline[-1:-5:-1]  # Points ordered in descending distance
+
+    # slopeVec1 = np.append(tailPts[0] - tailPts[2], [0])  # Slopevec through 1 and 3
+    slope13 = Slope(tailPts[0][0] - tailPts[2][0], tailPts[0][1] - tailPts[2][1])
+    # slopeVec2 = np.append(tailPts[1] - tailPts[3], [0])  # Slopevec through 2 and 4
+    slope24 = Slope(tailPts[1][0] - tailPts[3][0], tailPts[1][1] - tailPts[3][1])
+    midlineSlope = getAvgSlope(slope13, slope24)
+
+    # Average midline slope with cone slope
+    if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones) >= 2):
+        coneSlope = getConeSlope(cones)
+        extnSlope = getAvgSlope(midlineSlope, coneSlope)
     else:
-        if slopeVec1[0] == 0:               # Only 1 vertical
-            slopeVec2[0] /= 2
-            avgSlopeVec = slopeVec2
-        else:                               # Both not vertical
-            avgSlopeVec = (slopeVec1 + slopeVec2)/2
+        extnSlope = midlineSlope
 
-    return avgSlopeVec
+    # Vertical line
+    if extnSlope.isVert:
+        return Line(vert=True, dirPos=extnSlope.dirPos, intercept=lastPoint[0])  # return x-intercept instead 
 
-def classify(slopeVec, intercept, point):
+    intercept = lastPoint[1] - extnSlope.slope * lastPoint[0] # y = mx + b --> b = y - mx
+    print(f"Slope: {extnSlope}, intercept: {intercept}")
+    return Line(slope=extnSlope.slope, intercept=intercept)
+
+def classify(midline: Line, point: NDArray):
     """
     Args:
-        slopeVec:     3d vector representing slope. X is forward direction, Y is left/right direction
+        slope:        scalar slope value
         intercept:    a numerical value (x-intercept)
-        point:        the point to be classified
+        point:        the point to be classified (3D NDArray)
     Returns:
         classification:   0 if blue and 1 if yellow
         perpSlope:        Slope of perpendicular line including point (SCALAR)
@@ -129,38 +145,42 @@ def classify(slopeVec, intercept, point):
     TODO: there's a chance slope could be 0. Possible solution: midlineToLine also outputs boolean to indicate y-intercept instead
     """
 
-    # CORNER CASES
+    if midline.isVert:
+        classification = (midline.dirPos and point[0] >= midline.intercept) \
+                         or ((not midline.dirPos) and point[0] < midline.intercept)
+        perpLine = Line(horiz=True, dirPos=midline.dirPos, intercept=point[1])
+        return classification, perpLine
+
+    if midline.isHoriz:
+        classification = (midline.dirPos and point[1] <= midline.intercept) \
+                         or ((not midline.dirPos) and point[1] > midline.intercept)
+        perpLine = Line(vert=True, dirPos=not midline.dirPos, intercept=point[0])
+        return classification, perpLine
+
     # Case 1: slope is vertical line
+    # if slopeVec[0] == 0:
+    #     res = (1,0,0)
+    #     if slopeVec[1] < 0:
+    #         res = (-1,0,0)
+    #     return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, res, point[1]
 
-    # print()
-    # print(str(slopeVec) + " " + str(intercept) + " " + str(point))
-    if slopeVec[0] == 0:
-        res = (1,0,0)
-        if slopeVec[1] < 0:
-            res = (-1,0,0)
-        return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, res, point[1]
-
-    # Case 2: slope is horizontal line
-    if slopeVec[1] == 0:
-        res = (0,1,0)
-        if(slopeVec[0] > 0):
-            res = (0,-1,0)
-        return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, res, point[0]
+    # # Case 2: slope is horizontal line
+    # if slopeVec[1] == 0:
+    #     res = (0,1,0)
+    #     if(slopeVec[0] > 0):
+    #         res = (0,-1,0)
+    #     return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, res, point[0]
 
 
     # find perpendicular line with 'point' in it
-
-    slope = slopeVec[1] / slopeVec[0]
-    perpSlope = slopeVec[0] * -1 / slopeVec[1]      # -y/x (y is forward direction)
-
+    # slope = slopeVec[1] / slopeVec[0]
+    # perpSlope = slopeVec[0] * -1 / slopeVec[1]      # -y/x (y is forward direction)
+    perpSlope = -1/midline.slope
     perpIntercept =  point[1] - perpSlope * point[0] # b = y - mx
 
     # find the pt on the line to compare 'point' to: m1x + b1 = m2x + b2 --> x = (b2 - b1)/(m1 - m2)
-    x = (intercept - perpIntercept) / (perpSlope - slope)
-
+    x = (midline.intercept - perpIntercept) / (perpSlope - midline.slope)
     y = perpSlope * x + perpIntercept
-
-    # print("x,y: " + str((x,y)))
 
     # classify y by taking difference between point and (x,y)s' x components
     print(f"pt 0: {point[0]}    x: {x}")
@@ -301,7 +321,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         print(f"Num points: {len(points)}")
         # Find line extending end of midlline
         # slopeVec0 = midlineToLine(midline)
-        slopeVec, intercept = midlineToAvgLine(midline, cones)
+        extnMidline = midlineToAvgLine(midline, cones)
         # print(f"slope0: {slopeVec0[1]/slopeVec0[0]}  slope1: {slopeVec[1]/slopeVec[0]} ")
         
         # print("farBlue:\n" + str(farBlue))
@@ -323,8 +343,8 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
 
         # classify them
         # TODO: improve modularity
-        class1, pSlope1, pIntercept1 = classify(slopeVec, intercept, point1)
-        class2, pSlope2, pIntercept2 = classify(slopeVec, intercept, point2)
+        class1, pSlope1, pIntercept1 = classify(extnMidline, point1)
+        class2, pSlope2, pIntercept2 = classify(extnMidline, point2)
 
         print("class1: \n" + str(class1))
         print("class2: \n" + str(class2))
