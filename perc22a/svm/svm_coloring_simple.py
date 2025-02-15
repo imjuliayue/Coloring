@@ -5,7 +5,10 @@ from cones import *
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 import math
-# from svm_dependents import *
+
+MID_SLOPE_WEIGHT = .5
+CONE_SLOPE_WEIGHT = 1
+ANG_ACC_WEIGHT = 1.5
 
 class Slope:
     """
@@ -98,9 +101,29 @@ def getConeSlope(cones: Cones):
     slopeY = Slope(headPosY, farY1[0] - farY2[0], farY1[1] - farY2[1])
     return getAvgSlope(slopeB, slopeY)
 
+def slopeToAngle(slope):
+    if slope.isVert:
+        if slope.headPos:
+            return math.radians(90)
+        else:
+            return math.radians(-90)
+    else:
+        theta = math.atan(slope.slope)
+        if (theta >= 0 and not slope.headPos or
+            theta < 0 and slope.headPos):
+            return theta + math.radians(180)
+        return theta
 
+def weightAngAcc(coneSlopes, slope, weight):
+    thetaS = slopeToAngle(slope)
+    thetaC1 = slopeToAngle(coneSlopes[0])
+    thetaC2 = slopeToAngle(coneSlopes[1])
+    ratio = (thetaC1-thetaC2)/thetaC2
+    thetaS += weight*ratio*thetaS
+    headPos = thetaS >=0 and thetaS < math.radians(180)
+    return Line(headPos, slope=math.tan(thetaS))
 
-def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
+def midlineToAvgLine(midline: NDArray, cones: Cones, coneSlopes) -> Line:
     """
     Find line through end of midline
     Args:
@@ -129,7 +152,10 @@ def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
     # Average midline slope with cone slope
     if (len(cones.blue_cones) >= 2 and len(cones.yellow_cones) >= 2):
         coneSlope = getConeSlope(cones)
-        extnSlope = getAvgSlope(midlineSlope, coneSlope)
+        coneSlopes.append(coneSlope)
+        extnSlope = getAvgSlope(midlineSlope, coneSlope, w1=MID_SLOPE_WEIGHT, w2=CONE_SLOPE_WEIGHT)
+        if len(coneSlopes) >= 2:
+            extnSlope = weightAngAcc(coneSlopes[-1:-3:-1], extnSlope, ANG_ACC_WEIGHT)
     else:
         extnSlope = midlineSlope
 
@@ -323,8 +349,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         print(f"Num points: {len(points)}")
         # Find line extending end of midlline
         # slopeVec0 = midlineToLine(midline)
-        extnMidline = midlineToAvgLine(midline, cones)
-        coneSlopes.append(extnMidline)
+        extnMidline = midlineToAvgLine(midline, cones, coneSlopes)
         # print(f"slope0: {slopeVec0[1]/slopeVec0[0]}  slope1: {slopeVec[1]/slopeVec[0]} ")
         
         # print("farBlue:\n" + str(farBlue))
