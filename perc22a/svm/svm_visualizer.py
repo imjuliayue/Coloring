@@ -7,6 +7,10 @@ from mpl_toolkits.mplot3d import Axes3D
 from svm_coloring_simple import *
 from perc22a.svm.cones import Cones
 
+OFFSET = 2
+BEND_FACTOR = 3
+NUM_CONES = 10
+
 '''
     Generate Spline
 '''
@@ -81,8 +85,8 @@ flatness = random.uniform(0.1, 0.4)
 
 # Generate spline
 spline, X_smooth, Y_smooth, X, Y = generate_spline(flatness)
-spline_left, spline_right = generate_parallel_splines(spline, offset=3, bend_factor=4, num_points=1000)
-points_above = generate_points_above_splines(spline_left, spline_right, height=0.5, num_points=8)
+spline_left, spline_right = generate_parallel_splines(spline, offset=OFFSET, bend_factor=BEND_FACTOR, num_points=1000)
+points_above = generate_points_above_splines(spline_left, spline_right, height=0.5, num_points=NUM_CONES)
 clusters = generate_clusters_around_points(points_above, cluster_size=80, base_radius_x=1.0, height=0.8)
 
 print(points_above)
@@ -110,24 +114,26 @@ plt.title('3D Splines and Clusters')
 
 plt.show()
 
+colCones = Cones()
+colCones.add_blue_cone(-2, -2, 0)
+colCones.add_yellow_cone(2, -2, 0)
+points_above[:,2] = 0
+result = SVM_update([], colCones, points_above)
+print(result)
 # testing with the simple coloring algorithm
-slopeVec, intercept = midlineToLine([])
+# line = midlineToAvgLine([], colCones, [])
 
-perpSlope = None 
-perpIntercept = None
+# perpSlope = None 
+# perpIntercept = None
 
-classed = []
+# classed = []
 
-for cone in points_above:
-    classification, perpSlope, perpIntercept = classify(slopeVec, intercept, cone)
+# for cone in points_above:
+#     classification, perpLine = classify(line, cone)
 
-    classed.append(classification)
+#     classed.append(classification)
 
 print("----------------------------------------------------------------")
-print("\nJulia: Testing SVM_Update")
-points_above[:,2] = 0
-result = SVM_update([], Cones(), points_above)
-print(result)
 
 
 # print ("Cones: ")

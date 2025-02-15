@@ -8,7 +8,7 @@ import math
 
 MID_SLOPE_WEIGHT = .5
 CONE_SLOPE_WEIGHT = 1
-ANG_ACC_WEIGHT = 1.5
+ANG_ACC_WEIGHT = 1
 
 class Slope:
     """
@@ -318,6 +318,8 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     if len(coloredCones) == 0:
         print("Colored cones empty")
         midline, points = initClassification(points, coloredCones, svm)
+    else:
+        midline = svm.cones_to_midline(coloredCones)
 
     # points set minus colorCones
     print(coloredCones)
@@ -348,12 +350,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         print("======================================")
         print(f"Num points: {len(points)}")
         # Find line extending end of midlline
-        # slopeVec0 = midlineToLine(midline)
         extnMidline = midlineToAvgLine(midline, cones, coneSlopes)
-        # print(f"slope0: {slopeVec0[1]/slopeVec0[0]}  slope1: {slopeVec[1]/slopeVec[0]} ")
-        
-        # print("farBlue:\n" + str(farBlue))
-        # print("farYellow:\n" + str(farYellow))
 
         # Find the two points closest to farBlue and farYellow to classsify
         idx1 = get_closest_point_idx(np.array(points), farBlue)
@@ -388,21 +385,6 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         else:
             cones.add_blue_cone(point2[0],point2[1],point2[2])
 
-        # print("\nCones classified:\n" + str(cones.yellow_cones) + "\n" + str(cones.blue_cones))
-
-        # determine farthest cone
-        # farthest = (point2, pSlope2, pIntercept2)
-        # # print("FARTHEST:\n" + str(farthest)) 
-
-        # if(slopeVec[1] >= 0 and pIntercept1 > pIntercept2 or slopeVec[1] < 0 and pIntercept1 < pIntercept2):
-        #     farthest = (point1, pSlope1, pIntercept1)
-
-        # print("farthest: (point, slope, intercept\n" + str(farthest) + ")")
-
-        # if no more points, we are done!
-        if(len(points) == 0):
-            return cones
-
         farBlue = np.array(cones.blue_cones[-1])
         farYellow = np.array(cones.yellow_cones[-1])
 
@@ -410,16 +392,20 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         print("farYellow: " + str(farYellow))
         # plug into SVM
         midline = svm.cones_to_midline(cones)
-        # print("midline: ")
-        # print(midline)
+        print(f"midline: {len(midline)}")
+        print(midline)
         print("cones:\n" + str(cones))
 
         fig = plt.figure(figsize=(12, 8))
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlim([-10, 10])
+        ax.set_ylim([0, 25])
+        ax.set_box_aspect([20, 25, 10])
         bcones = np.array(cones.blue_cones)
         ycones = np.array(cones.yellow_cones)
         p = np.array(points)
-        ax.scatter(p[:, 0], p[:, 1], p[:, 2], color='black', label='pts', s=50)
+        if (len(points) > 0):
+            ax.scatter(p[:, 0], p[:, 1], p[:, 2], color='black', label='pts', s=50)
         ax.scatter(bcones[:, 0], bcones[:, 1], bcones[:, 2], color='blue', label='blue', s=50)
         ax.scatter(ycones[:, 0], ycones[:, 1], ycones[:, 2], color='orange', label='orange', s=50)
         ax.scatter(midline[:, 0], midline[:, 1], 0, color='red', label='midline', s=50)
@@ -431,7 +417,10 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
 
         plt.show()
 
-        # print(midline)
+        # if no more points, we are done!
+        if(len(points) == 0):
+            return cones
+
 
     # return the cones
     return cones
