@@ -5,6 +5,7 @@ from cones import *
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 import math
+import time
 
 MID_SLOPE_WEIGHT = .5
 CONE_SLOPE_WEIGHT = 1
@@ -164,7 +165,7 @@ def midlineToAvgLine(midline: NDArray, cones: Cones, coneSlopes) -> Line:
         return Line(headPos=extnSlope.headPos, vert=True, intercept=lastPoint[0])  # return x-intercept instead 
 
     intercept = lastPoint[1] - extnSlope.slope * lastPoint[0] # y = mx + b --> b = y - mx
-    print(f"Slope: {extnSlope}, intercept: {intercept}")
+    #print(f"Slope: {extnSlope}, intercept: {intercept}")
     return Line(headPos=extnSlope.headPos, slope=extnSlope.slope, intercept=intercept)
 
 def classify(midline: Line, point: NDArray):
@@ -204,12 +205,12 @@ def classify(midline: Line, point: NDArray):
     y = perpSlope * x + perpIntercept
 
     # classify y by taking difference between point and (x,y)s' x components
-    print(f"pt 0: {point[0]}    x: {x}")
+    #print(f"pt 0: {point[0]}    x: {x}")
     direction = point[0] - x
 
     classification = 0
 
-    print(direction)
+    #print(direction)
     if direction > 0 and midline.headPos or direction < 0 and not midline.headPos:
         classification = 1
 
@@ -247,7 +248,7 @@ def conesBeforeLine(points, perpSlopeVec, perpIntercept):
     newList = []                    # holds True/False values
 
     for i in range(len(points)):               # classify function kind of does it lol
-        print(perpSlopeVec)
+        #print(perpSlopeVec)
         c, _, _ = classify(perpSlopeVec, perpIntercept, points[i])
         newList.append(c)
     
@@ -289,7 +290,7 @@ def initClassification(points: NDArray, cones: Cones, SVM: SVM) -> tuple[NDArray
     cones.add_blue_cone(blue[0], blue[1], blue[2])
     cones.add_yellow_cone(yellow[0], yellow[1], yellow[2])
 
-    print(cones)
+    #print(cones)
     return SVM.cones_to_midline(cones), points
 
 def filter_out_cones(cones_in: NDArray, cones_notin: NDArray) -> NDArray:
@@ -311,26 +312,27 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     TODO: only output classifications of new cones!!!
     """
 
+    startTime = time.time()
     # Create an SVM class
     svm = SVM()
 
     # Corner case: coloredCones is initially empty
     if len(coloredCones) == 0:
-        print("Colored cones empty")
+        #print("Colored cones empty")
         midline, points = initClassification(points, coloredCones, svm)
     else:
         midline = svm.cones_to_midline(coloredCones)
 
     # points set minus colorCones
-    print(coloredCones)
+    #print(coloredCones)
     npColored = np.array(np.concatenate((coloredCones.blue_cones, coloredCones.yellow_cones)))
     npPoints = np.array(points) 
 
-    print("npColored:\n" + str(npColored))      
-    print("npPoints:\n" + str(npPoints))      
+    #print("npColored:\n" + str(npColored))      
+    #print("npPoints:\n" + str(npPoints))      
     # points = np.diff(np.array([npPoints, npColored]), axis=1)     # Note: now points is coords of UNCLASSIFIED cones
     npPoints = np.array([row for row in npPoints if not any(np.array_equal(row, r) for r in npColored)])
-    print("npPoints after:\n" + str(npPoints))      
+    #print("npPoints after:\n" + str(npPoints))      
     points = npPoints.tolist()
 
     # Make a new cones class and pass these colored cones into it
@@ -347,8 +349,8 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     coneSlopes = []
     # Iteratively classify all the points
     while(len(points) > 0):
-        print("======================================")
-        print(f"Num points: {len(points)}")
+        #print("======================================")
+        #print(f"Num points: {len(points)}")
         # Find line extending end of midlline
         extnMidline = midlineToAvgLine(midline, cones, coneSlopes)
 
@@ -360,20 +362,20 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         idx2 = get_closest_point_idx(np.array(points), farYellow)
         point2 = points[idx2]
         points.remove(point2)
-        print()
-        # print("pointsAfterRemove:\n" + str(points))
-        print("point1: \n" + str(point1))
-        print("point2: \n" + str(point2))
-        print()
+        #print()
+        # #print("pointsAfterRemove:\n" + str(points))
+        #print("point1: \n" + str(point1))
+        #print("point2: \n" + str(point2))
+        #print()
 
         # classify them
         # TODO: improve modularity
         class1, perpLine = classify(extnMidline, point1)
         class2, perpLine = classify(extnMidline, point2)
 
-        print("class1: \n" + str(class1))
-        print("class2: \n" + str(class2))
-        print()
+        #print("class1: \n" + str(class1))
+        #print("class2: \n" + str(class2))
+        #print()
 
         if class1:
             cones.add_yellow_cone(point1[0],point1[1],point1[2])
@@ -388,37 +390,38 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         farBlue = np.array(cones.blue_cones[-1])
         farYellow = np.array(cones.yellow_cones[-1])
 
-        print("farBlue: " + str(farBlue))
-        print("farYellow: " + str(farYellow))
+        #print("farBlue: " + str(farBlue))
+        #print("farYellow: " + str(farYellow))
         # plug into SVM
         midline = svm.cones_to_midline(cones)
-        print(f"midline: {len(midline)}")
-        print(midline)
-        print("cones:\n" + str(cones))
-
-        fig = plt.figure(figsize=(12, 8))
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlim([-10, 10])
-        ax.set_ylim([0, 25])
-        ax.set_box_aspect([20, 25, 10])
-        bcones = np.array(cones.blue_cones)
-        ycones = np.array(cones.yellow_cones)
-        p = np.array(points)
-        if (len(points) > 0):
-            ax.scatter(p[:, 0], p[:, 1], p[:, 2], color='black', label='pts', s=50)
-        ax.scatter(bcones[:, 0], bcones[:, 1], bcones[:, 2], color='blue', label='blue', s=50)
-        ax.scatter(ycones[:, 0], ycones[:, 1], ycones[:, 2], color='orange', label='orange', s=50)
-        ax.scatter(midline[:, 0], midline[:, 1], 0, color='red', label='midline', s=50)
-        ax.set_xlabel('X-axis')
-        ax.set_ylabel('Y-axis')
-        ax.set_zlabel('Z-axis')
-        ax.legend()
-        plt.title('3D Splines and Clusters')
-
-        plt.show()
+        #print(f"midline: {len(midline)}")
+        #print(midline)
+        #print("cones:\n" + str(cones))
 
         # if no more points, we are done!
         if(len(points) == 0):
+            print(f"Time elapsed: {time.time() - startTime}")
+            fig = plt.figure(figsize=(12, 8))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.set_xlim([-10, 10])
+            ax.set_ylim([0, 25])
+            ax.set_box_aspect([20, 25, 10])
+            bcones = np.array(cones.blue_cones)
+            ycones = np.array(cones.yellow_cones)
+            p = np.array(points)
+            if (len(points) > 0):
+                ax.scatter(p[:, 0], p[:, 1], p[:, 2], color='black', label='pts', s=50)
+            ax.scatter(bcones[:, 0], bcones[:, 1], bcones[:, 2], color='blue', label='blue', s=50)
+            ax.scatter(ycones[:, 0], ycones[:, 1], ycones[:, 2], color='orange', label='orange', s=50)
+            ax.scatter(midline[:, 0], midline[:, 1], 0, color='red', label='midline', s=50)
+            ax.set_xlabel('X-axis')
+            ax.set_ylabel('Y-axis')
+            ax.set_zlabel('Z-axis')
+            ax.legend()
+            plt.title('3D Splines and Clusters')
+
+            plt.show()
+            
             return cones
 
 
