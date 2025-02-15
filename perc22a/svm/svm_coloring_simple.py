@@ -13,19 +13,19 @@ class Slope:
         mx, my: scalar slope vector components
         slope: scalar slope value
         isVert, isHoriz: indicates vertical/horizontal slope
-        dirPos: direction of slope if vertical/horizontal
+        headPos: direction of slope if vertical/horizontal
     Notes
         (mx, my) = None if (isVert or isHoriz) else (float, float)
         slope = my/mx if (not (isVert or isHoriz)) else None
-        dirPos = None if (not (isVert or isHoriz)) else (y > 0 and isVert) or (x > 0 and isHoriz)
+        headPos = None if (not (isVert or isHoriz)) else (y > 0 and isVert) or (x > 0 and isHoriz)
     """
-    def __init__(self, mx: float = None, my: float = None, slope = None,
-                 vert: bool = False, horiz: bool = False, dirPos: bool = None):
+    def __init__(self, headPos: bool, mx: float = None, my: float = None, slope = None,
+                 vert: bool = False, horiz: bool = False):
         assert ((mx is not None and my is not None) or slope or vert or horiz)
         assert (not (mx == 0 and my == 0))
         self.isVert = self.isHoriz = False
-        self.dirPos = dirPos
-        if slope:
+        self.headPos = headPos
+        if slope is not None:
             self.slope = slope
         elif vert or mx == 0:
             assert not mx and not horiz
@@ -34,28 +34,28 @@ class Slope:
         elif horiz or my == 0:
             assert not my and not vert
             self.isHoriz = True
-            self.slope = None
+            self.slope = 0
         else:
             self.slope = my/mx
 
 class Line(Slope):
-    def __init__(self, slope_x: float = None, slope_y: float = None, slope = None,
-                 intercept: float = 0, vert: bool = False, horiz: bool = False, dirPos: bool = None):
-        Slope.__init__(self, slope_x, slope_y, slope, vert, horiz, dirPos)
+    def __init__(self, headPos: bool, slope_x: float = None, slope_y: float = None, slope = None,
+                 intercept: float = 0, vert: bool = False, horiz: bool = False,):
+        Slope.__init__(self, headPos, slope_x, slope_y, slope, vert, horiz)
         self.intercept = intercept
 
 def getAvgSlope(slope1: Slope, slope2: Slope, w1: int = 1, w2: int = 1) -> Slope:
         """Returns average of the two slopes as a Slope class"""
         if slope2.isVert:
             if slope1.isVert:           # Both vertical
-                return Slope(vert=True, dirPos=slope1.dirPos)
+                return Slope(headPos=slope1.headPos, vert=True)
             else:                       # Avg slope 1 with vertical
                 theta = math.atan(slope1.slope)
                 if theta >= 0:
                     vert = math.radians(90)
                 else:
                     vert = math.radians(-90)
-                return Slope(slope=math.tan((vert+theta)/2))
+                return Slope(headPos=slope1.headPos, slope=math.tan((vert+theta)/2))
         else:
             if slope1.isVert:           # Avg slope 2 with vertical
                 angle = math.atan(slope2.slope)
@@ -63,19 +63,20 @@ def getAvgSlope(slope1: Slope, slope2: Slope, w1: int = 1, w2: int = 1) -> Slope
                     vert = math.radians(90)
                 else:
                     vert = math.radians(-90)
-                return Slope(slope=math.tan((vert+angle)/2))
+                return Slope(headPos=slope2.headPos, slope=math.tan((vert+angle)/2))
             else:                       # Both not vertical
                 theta1 = math.atan(slope1.slope)
                 theta2 = math.atan(slope2.slope)
+                if (theta1 >= 0 and not slope1.headPos or
+                    theta1 < 0 and slope1.headPos):
+                    theta1 += math.radians(180)
+                if (theta2 >= 0 and not slope2.headPos or
+                    theta2 < 0 and slope2.headPos):
+                    theta2 += math.radians(180)
+
                 thetaAvg = (w1*theta1 + w2*theta2)/(w1+w2)
-                dirPos = None
-                if thetaAvg == 0:  # This just shouldn't happen
-                    dirPos = True
-                elif math.degrees(thetaAvg) == 90:
-                    dirPos = True
-                elif math.degrees(thetaAvg) == -90:
-                    dirPos = False
-                return Slope(slope=math.tan(thetaAvg), dirPos=dirPos)
+                headPos = thetaAvg >=0 and thetaAvg < math.radians(180)
+                return Slope(headPos=headPos, slope=math.tan(thetaAvg))
 
 def getConeSlope(cones: Cones):
     """
@@ -90,9 +91,14 @@ def getConeSlope(cones: Cones):
     farY1 = np.array(cones.yellow_cones[-1])
     farY2 = np.array(cones.yellow_cones[-2])
 
-    slopeB = Slope(farB1[0] - farB2[0], farB1[1] - farB2[1])
-    slopeY = Slope(farY1[0] - farY2[0], farY1[1] - farY2[1])
+    # Headed up if y1 > y2 or if same y, then x1 > x2
+    headPosB = farB1[1] > farB2[1] or farB1[1] == farB2[1] and farB1[0] > farB2[0] # Cone points sohuldn't be identical
+    headPosY = farY1[1] > farY2[1] or farY1[1] == farY2[1] and farB1[0] > farB2[0]
+    slopeB = Slope(headPosB, farB1[0] - farB2[0], farB1[1] - farB2[1])
+    slopeY = Slope(headPosY, farY1[0] - farY2[0], farY1[1] - farY2[1])
     return getAvgSlope(slopeB, slopeY)
+
+
 
 def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
     """
@@ -103,17 +109,21 @@ def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
         Line: line extending midline
     """
     if len(midline) == 0 or len(midline) == 1:
-        return Line(vert=True, dirPos = True, intercept=0)
+        return Line(headPos=True, vert=True, intercept=0)
     
     lastPoint = midline[-1]
 
     # Get slopes between first & third, second & fourth furthest points
     tailPts = midline[-1:-5:-1]  # Points ordered in descending distance
 
-    # slopeVec1 = np.append(tailPts[0] - tailPts[2], [0])  # Slopevec through 1 and 3
-    slope13 = Slope(tailPts[0][0] - tailPts[2][0], tailPts[0][1] - tailPts[2][1])
-    # slopeVec2 = np.append(tailPts[1] - tailPts[3], [0])  # Slopevec through 2 and 4
-    slope24 = Slope(tailPts[1][0] - tailPts[3][0], tailPts[1][1] - tailPts[3][1])
+    # Slopevec through 1 and 3
+    headPos13 = (tailPts[0][1] > tailPts[2][1] or 
+                 tailPts[0][1] == tailPts[2][1] and tailPts[0][0] > tailPts[2][0])
+    slope13 = Slope(headPos13, tailPts[0][0] - tailPts[2][0], tailPts[0][1] - tailPts[2][1])
+    # Slopevec through 2 and 4
+    headPos24 = (tailPts[1][1] > tailPts[3][1] or
+                 tailPts[1][1] == tailPts[3][1] and tailPts[1][0] > tailPts[3][0])
+    slope24 = Slope(headPos24, tailPts[1][0] - tailPts[3][0], tailPts[1][1] - tailPts[3][1])
     midlineSlope = getAvgSlope(slope13, slope24)
 
     # Average midline slope with cone slope
@@ -125,11 +135,11 @@ def midlineToAvgLine(midline: NDArray, cones: Cones) -> Line:
 
     # Vertical line
     if extnSlope.isVert:
-        return Line(vert=True, dirPos=extnSlope.dirPos, intercept=lastPoint[0])  # return x-intercept instead 
+        return Line(headPos=extnSlope.headPos, vert=True, intercept=lastPoint[0])  # return x-intercept instead 
 
     intercept = lastPoint[1] - extnSlope.slope * lastPoint[0] # y = mx + b --> b = y - mx
     print(f"Slope: {extnSlope}, intercept: {intercept}")
-    return Line(slope=extnSlope.slope, intercept=intercept)
+    return Line(headPos=extnSlope.headPos, slope=extnSlope.slope, intercept=intercept)
 
 def classify(midline: Line, point: NDArray):
     """
@@ -146,31 +156,16 @@ def classify(midline: Line, point: NDArray):
     """
 
     if midline.isVert:
-        classification = (midline.dirPos and point[0] >= midline.intercept) \
-                         or ((not midline.dirPos) and point[0] < midline.intercept)
-        perpLine = Line(horiz=True, dirPos=midline.dirPos, intercept=point[1])
+        classification = ((midline.headPos and point[0] >= midline.intercept) or
+                         ((not midline.headPos) and point[0] < midline.intercept))
+        perpLine = Line(headPos=midline.headPos, horiz=True, intercept=point[1])
         return classification, perpLine
 
     if midline.isHoriz:
-        classification = (midline.dirPos and point[1] <= midline.intercept) \
-                         or ((not midline.dirPos) and point[1] > midline.intercept)
-        perpLine = Line(vert=True, dirPos=not midline.dirPos, intercept=point[0])
+        classification = ((midline.headPos and point[1] <= midline.intercept) or
+                          ((not midline.headPos) and point[1] > midline.intercept))
+        perpLine = Line(headPos=not midline.headPos, vert=True, intercept=point[0])
         return classification, perpLine
-
-    # Case 1: slope is vertical line
-    # if slopeVec[0] == 0:
-    #     res = (1,0,0)
-    #     if slopeVec[1] < 0:
-    #         res = (-1,0,0)
-    #     return slopeVec[1] < 0 and point[0] < intercept or slopeVec[1] >= 0 and point[0] >= intercept, res, point[1]
-
-    # # Case 2: slope is horizontal line
-    # if slopeVec[1] == 0:
-    #     res = (0,1,0)
-    #     if(slopeVec[0] > 0):
-    #         res = (0,-1,0)
-    #     return slopeVec[0] < 0 and point[1] > intercept or slopeVec[0] >= 0 and point[1] <= intercept, res, point[0]
-
 
     # find perpendicular line with 'point' in it
     # slope = slopeVec[1] / slopeVec[0]
@@ -189,10 +184,18 @@ def classify(midline: Line, point: NDArray):
     classification = 0
 
     print(direction)
-    if direction > 0 and (slopeVec[1] > 0) or direction < 0 and (slopeVec[1] < 0):
+    if direction > 0 and midline.headPos or direction < 0 and not midline.headPos:
         classification = 1
 
-    return classification, (0,perpSlope,0), perpIntercept
+
+    if math.tan(midline.slope) > 0:
+        if midline.headPos:
+            perpHead = False
+        else:
+            perpHead = True
+    else:
+        perpHead = midline.headPos
+    return classification, Line(perpHead, slope=perpSlope)
 
 
 def get_closest_point_idx(points: NDArray, curr_point: NDArray) -> int:
@@ -289,7 +292,6 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     if len(coloredCones) == 0:
         print("Colored cones empty")
         midline, points = initClassification(points, coloredCones, svm)
-    
 
     # points set minus colorCones
     print(coloredCones)
@@ -314,7 +316,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
     farBlue = np.array(cones.blue_cones[idxBlue])
     farYellow = np.array(cones.yellow_cones[idxYellow])
 
-    loopCt = 0
+    coneSlopes = []
     # Iteratively classify all the points
     while(len(points) > 0):
         print("======================================")
@@ -322,6 +324,7 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         # Find line extending end of midlline
         # slopeVec0 = midlineToLine(midline)
         extnMidline = midlineToAvgLine(midline, cones)
+        coneSlopes.append(extnMidline)
         # print(f"slope0: {slopeVec0[1]/slopeVec0[0]}  slope1: {slopeVec[1]/slopeVec[0]} ")
         
         # print("farBlue:\n" + str(farBlue))
@@ -343,8 +346,8 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
 
         # classify them
         # TODO: improve modularity
-        class1, pSlope1, pIntercept1 = classify(extnMidline, point1)
-        class2, pSlope2, pIntercept2 = classify(extnMidline, point2)
+        class1, perpLine = classify(extnMidline, point1)
+        class2, perpLine = classify(extnMidline, point2)
 
         print("class1: \n" + str(class1))
         print("class2: \n" + str(class2))
@@ -363,11 +366,11 @@ def SVM_update(midline: NDArray, coloredCones: Cones, points: NDArray) -> Cones:
         # print("\nCones classified:\n" + str(cones.yellow_cones) + "\n" + str(cones.blue_cones))
 
         # determine farthest cone
-        farthest = (point2, pSlope2, pIntercept2)
-        # print("FARTHEST:\n" + str(farthest)) 
+        # farthest = (point2, pSlope2, pIntercept2)
+        # # print("FARTHEST:\n" + str(farthest)) 
 
-        if(slopeVec[1] >= 0 and pIntercept1 > pIntercept2 or slopeVec[1] < 0 and pIntercept1 < pIntercept2):
-            farthest = (point1, pSlope1, pIntercept1)
+        # if(slopeVec[1] >= 0 and pIntercept1 > pIntercept2 or slopeVec[1] < 0 and pIntercept1 < pIntercept2):
+        #     farthest = (point1, pSlope1, pIntercept1)
 
         # print("farthest: (point, slope, intercept\n" + str(farthest) + ")")
 
