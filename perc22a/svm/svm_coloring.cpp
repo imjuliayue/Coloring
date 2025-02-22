@@ -5,7 +5,7 @@
 #include <cmath>
 #include <iomanip>
 
-#define MID_WEIGHT .5
+#define MID_WEIGHT 0.5
 #define CONE_WEIGHT 1
 #define DERIV2_WEIGHT 1
 
@@ -60,9 +60,9 @@ struct Cones {
 };
 
 struct Slope {
-    bool isVert = false;
-    bool isHoriz = false;
-    bool headPos = true;
+    bool isVert {false};
+    bool isHoriz {false};
+    bool headPos {true};
     float slope;
 };
 
@@ -73,11 +73,47 @@ struct Line {
 
 class SVM {
     public:
-        std::vector<Point> conesToMidline(Cones cones) {
-            std::vector<Point> midline;
+        std::vector<Point> conesToMidline(Cones &cones) {
+            std::vector<Point> midline = {
+                { 0.1, -3.6},
+                { 0.1, -2.1},
+                { 0.1, -3.1},
+                { 0.1, -2.6},
+                { 0.1, -2.1},
+                { 0.1, -1.6},
+                { 0.1, -1.1},
+                { 0.1, -0.6},
+                { 0.1, -0.1},
+                { 0.1,  0.4},
+                { 0.1,  0.9},
+                { 0.1,  1.4},
+                { 0.1,  1.9}
+            };
             return midline;
         }
 };
+
+std::string conesToString(const std::vector<Point> &cones) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    for (int i = 0; i < cones.size(); ++i) {
+        ss << "  " << i << ": (" << cones[i].x << ", " << cones[i].y << ")\n";
+    }
+    return ss.str();
+}
+
+std::string getConesString (Cones &cones) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "-------Cones--------\n";
+    ss << "Blue (" << cones.blueCones.size() << " cones)\n";
+    ss << conesToString(cones.blueCones);
+    ss << "Yellow (" << cones.yellowCones.size() << " cones)\n";
+    ss << conesToString(cones.yellowCones);
+    ss << "Orange (" << cones.orangeCones.size() << " cones)\n";
+    ss << conesToString(cones.orangeCones);
+    return ss.str();
+}
 
 /**
  * @brief Return coord in points closest to currPoint and optionally remove from points
@@ -151,8 +187,10 @@ void rmClassifiedCones(std::vector<Point> &points, const Cones &cones) {
 }
 
 Slope toSlope(bool headPos, float my, float mx = 1) {
-    Slope slope = {.headPos = headPos, .isVert = mx==0, .isHoriz = my==0};
-    if (mx == 0) return;
+    Slope slope {.headPos = headPos, .isVert = mx==0, .isHoriz = my==0};
+    if (mx == 0) {
+        return slope;
+    }
     slope.slope = my / mx;
     return slope;
 }
@@ -176,7 +214,7 @@ float slopeToAngle(Slope slope) {
     }
 }
 
-Slope getAvgSlope(Slope slope1, Slope slope2, int w1 = 1, int w2 = 1) {
+Slope getAvgSlope(Slope slope1, Slope slope2, float w1 = 1, float w2 = 1) {
     // Both slopes vertical
     if (slope1.isVert && slope2.isVert) {
         return toSlope(slope1.headPos, 1, 0);
@@ -383,4 +421,32 @@ Cones SVM_update(std::vector<Point> points, Cones coloredCones) {
         midline = svm.conesToMidline(coloredCones);
     }
     return coloredCones;
+}
+
+int main () {
+    Cones coloredCones;
+    std::vector<Point> points = {
+        {-2, 0}, 
+        {2, 0}, 
+        {-6.5, 2.2},
+        {3.35, 2.2},
+        {-8, 4.4},
+        {4, 4.4},
+        {-4, 6.7},
+        {3.6, 6.7},
+        {-1.6, 8.9},
+        {2.4, 8.9},
+        {-3, 1.1},
+        { 9.3, 1.1},
+        {-4, 1.3},
+        { 7.1, 1.3},
+        {-3.8, 1.5},
+        { 2.2, 1.5},
+        {-2.7, 1.8},
+        { 1.3, 1.8},
+        {-1.3, 2},
+        {2.7, 2}};
+    Cones result = SVM_update(points, coloredCones);
+    std::cout << getConesString(result);
+    return 0;
 }
