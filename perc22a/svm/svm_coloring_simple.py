@@ -1,5 +1,4 @@
 import numpy as np
-from svm_dependents import *
 from SVM import *
 from cones import *
 from numpy.typing import NDArray

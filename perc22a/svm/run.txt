@@ -1,0 +1,1 @@
+/usr/bin/clang++ -std=gnu++14 -fcolor-diagnostics -fansi-escape-codes -g svm_coloring.cpp svm.cpp cones.cpp svm_conv.cpp -o svm_coloring

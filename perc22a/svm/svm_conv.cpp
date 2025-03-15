@@ -14,7 +14,7 @@
 
 #include "svm_conv.hpp"
 #include "cones.hpp"
-#include "constants.hpp"
+#include "constants_svm.hpp"
 
 namespace controls {
     namespace midline {
@@ -77,7 +77,7 @@ namespace controls {
         }
 
         // takes a vector of points and sorts them based on a spline
-        conesList sortBoundaryPoints(conesList points, double max_spline_length=max_spline_length) {
+        conesList sortBoundaryPoints(conesList points, double max_spline_length=controls::max_spline_length) {
             // initialize spline length and sorted points
             double spline_length = 0;
             conesList sorted_points;
@@ -132,10 +132,10 @@ namespace controls {
 
             // ranges for x and y
             std::vector<double> x_range, y_range;
-            for (double x = x_min; x <= x_max; x += mesh_grid_spacing) {
+            for (double x = x_min; x <= x_max; x += controls::mesh_grid_spacing) {
                 x_range.push_back(x);
             }
-            for (double y = y_min; y <= y_max; y += mesh_grid_spacing) {
+            for (double y = y_min; y <= y_max; y += controls::mesh_grid_spacing) {
                 y_range.push_back(y);
             }
 
