@@ -128,7 +128,7 @@ void rmClassifiedCones(pointsList &points, const controls::midline::Cones&cones)
 }
 
 Slope toSlope(bool headPos, double my, double mx = 1) {
-    Slope slope {.headPos = headPos, .isVert = mx==0, .isHoriz = my==0};
+    Slope slope {.isVert = mx==0, .isHoriz = my==0, .headPos = headPos};
     if (mx == 0) {
         return slope;
     }
@@ -338,6 +338,9 @@ controls::midline::Cones SVM_update(pointsList points, controls::midline::Cones 
     // Find farthest colored controls::midline::Cones(should be closest to last midline point)
     std::vector<double> farBlue = getClosestPt(coloredCones.getBlueCones(), midline.back());
     std::vector<double> farYellow = getClosestPt(coloredCones.getYellowCones(), midline.back());
+    // std::cout << "back midline: " << midline.back << "\n"
+    // std::cout << "farBlue: " << farBlue << "\n"
+    // std::cout << "farYellow: " << farYellow << "\n"
 
     // Iteratively classify all points
     std::vector<Slope> coneSlopes;
