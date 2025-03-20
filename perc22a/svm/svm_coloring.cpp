@@ -7,11 +7,13 @@
 
 #include "cones.hpp"
 #include "svm_conv.hpp"
+// #include "matplotlibcpp.h"
 #include "svm.hpp"
 
 #define MID_WEIGHT 0.5
 #define CONE_WEIGHT 1
-#define DERIV2_WEIGHT 1
+#define DERIV2_WEIGHT 0.8
+#define VERBOSE false
 
 typedef std::vector<double> Point;
 typedef std::vector<std::vector<double>> pointsList;
@@ -281,6 +283,15 @@ Line midlineToAvgLine(const pointsList midline, const controls::midline::Cones&c
     }
 
     double intercept = lastPt1[1] - extnSlope.slope * lastPt1[0]; // y = mx + b --> b = y - mx
+    if(VERBOSE){
+        std::cout << "midline slope: " << extnSlope.slope << std::endl;
+        std::cout << "midline intercept: " << intercept << std::endl;
+        std::cout << "midline lastPt: ";
+        for(const auto& i : lastPt1){
+            std::cout << i << " ";
+        }
+        std::cout << std::endl;
+    }
     return Line{.slope = extnSlope, .intercept = intercept};
 }
 
@@ -298,6 +309,19 @@ void classify(Line midline, std::vector<double> point, controls::midline::Cones 
         // Find perpendicular line with point in it
         double perpSlope = -1/midline.slope.slope;
         double perpIntercept = point[1] - perpSlope * point[0]; // b = y - mx
+        // double perpIntercept = point[1] - perpSlope * point[0]; // b = y - mx
+
+        if(VERBOSE){
+            std::cout << "Perpendicular slope: " << perpSlope << std::endl;
+            std::cout << "Perpendicular Intercept: " << perpIntercept << std::endl;
+            std::cout << "Slope: " << midline.slope.slope << std::endl;
+            std::cout << "Intercept: " << midline.intercept << std::endl;
+            std::cout << "Point: ";
+            for(const auto& num : point){
+                std::cout << num << " ";
+            }
+            std::cout << std::endl;
+        }
 
         // Find the point on the line to compare "point" to
         // m1x + b1 = m2x + b2 --> x = (b2 - b1)/(m1 - m2)
@@ -338,9 +362,9 @@ controls::midline::Cones SVM_update(pointsList points, controls::midline::Cones 
     // Find farthest colored controls::midline::Cones(should be closest to last midline point)
     std::vector<double> farBlue = getClosestPt(coloredCones.getBlueCones(), midline.back());
     std::vector<double> farYellow = getClosestPt(coloredCones.getYellowCones(), midline.back());
-    // std::cout << "back midline: " << midline.back << "\n"
-    // std::cout << "farBlue: " << farBlue << "\n"
-    // std::cout << "farYellow: " << farYellow << "\n"
+    // std::cout << "back midline: " << midline.back() << "\n" << std::endl;
+    // std::cout << "farBlue: " << farBlue << "\n" << std::endl;
+    // std::cout << "farYellow: " << farYellow << "\n" << std::endl;
 
     // Iteratively classify all points
     std::vector<Slope> coneSlopes;
@@ -363,20 +387,44 @@ controls::midline::Cones SVM_update(pointsList points, controls::midline::Cones 
 
         // Update midline
         midline = cones_to_pointsList(controls::midline::cones_to_midline(coloredCones));
-        std::cout << "\nMidline\n";
-        for (int i = 0; i < midline.size(); ++i) {
-            std::cout << midline[i][0] << "," << midline[i][1] << "\n";
+        if(VERBOSE){    
+            std::cout << "Midline\n";
+            for (int i = 0; i < midline.size(); ++i) {
+                std::cout << midline[i][0] << "," << midline[i][1] << "\n";
+            }
+            std::cout << std::endl;
         }
     }
     return coloredCones;
 }
 
+void printResults(controls::midline::Cones result){
+    std::cout << "Blue Cones: \n";
+    for (double i = 0; i < result.getBlueCones().size(); i++) {
+        std::cout << result.getBlueCones()[i][0] << "," << result.getBlueCones()[i][1] << "\n";
+    }
+
+    std::cout << "Yellow Cones: \n";
+    for (double i = 0; i < result.getYellowCones().size(); i++) {
+        std::cout << result.getYellowCones()[i][0] << "," << result.getYellowCones()[i][1] << "\n";
+    }
+}
+
+
 int main () {
     controls::midline::Cones coloredCones;
+    controls::midline::Cones coloredCones2;
     pointsList points;
-    for (double i = 0; i < 10; i++) {
-        points.push_back({-2+i, i, 0});
-        points.push_back({2+i, i, 0});
+    pointsList points2;
+    for (double i = 0; i < 20; i+=1) {
+        points.push_back({-2+i, i*8, 0});
+        points.push_back({2+i, i*8, 0});
+        std::cout << -2+i << "," << i << "\n";
+        std::cout << 2+i << "," << i << "\n";
+    }
+    for (double i = 0; i < 20; i+=1) {
+        points2.push_back({-2+i, i*5, 0});
+        points2.push_back({2+i, i*5, 0});
         std::cout << -2+i << "," << i << "\n";
         std::cout << 2+i << "," << i << "\n";
     }
@@ -404,17 +452,15 @@ int main () {
     //     { 0.07, 13.33},
     //     { 0.22, 15.56}
     // };
+    // std::cout << "test1";
     controls::midline::Cones result = SVM_update(points, coloredCones);
+    // std::cout << "test1";
+    controls::midline::Cones result2 = SVM_update(points2, coloredCones2);
+    // std::cout << "test1";
     // std::cout << result.toString();
-    std::cout << "Blue Cones: \n";
-    for (double i = 0; i < result.getBlueCones().size(); i++) {
-        std::cout << result.getBlueCones()[i][0] << "," << result.getBlueCones()[i][1] << "\n";
-    }
 
-    std::cout << "Yellow Cones: \n";
-    for (double i = 0; i < result.getYellowCones().size(); i++) {
-        std::cout << result.getYellowCones()[i][0] << "," << result.getYellowCones()[i][1] << "\n";
-    }
+    printResults(result);
+    printResults(result2);
 
     return 0;
 }
